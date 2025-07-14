@@ -133,24 +133,44 @@ impl<T: IgHttpClient + 'static> AccountService for AccountServiceImpl<T> {
         session: &IgSession,
         from: &str,
         to: &str,
-        page_size: u32,
-        page_number: u32,
     ) -> Result<TransactionHistory, AppError> {
-        let path = format!(
-            "history/transactions?from={from}&to={to}&pageSize={page_size}&pageNumber={page_number}"
-        );
-        info!("Getting transaction history");
+        const PAGE_SIZE: u32 = 200;
+        let mut all_transactions = Vec::new();
+        let mut current_page = 1;
+        #[allow(unused_assignments)]
+        let mut last_metadata = None;
 
-        let result = self
-            .client
-            .request::<(), TransactionHistory>(Method::GET, &path, session, None, "2")
-            .await?;
+        loop {
+            let path = format!(
+                "history/transactions?from={from}&to={to}&pageSize={PAGE_SIZE}&pageNumber={current_page}"
+            );
+            info!("Getting transaction history page {}", current_page);
+
+            let result = self
+                .client
+                .request::<(), TransactionHistory>(Method::GET, &path, session, None, "2")
+                .await?;
+
+            let total_pages = result.metadata.page_data.total_pages as u32;
+            last_metadata = Some(result.metadata);
+            all_transactions.extend(result.transactions);
+
+            if current_page >= total_pages {
+                break;
+            }
+            current_page += 1;
+        }
 
         debug!(
-            "Transaction history obtained: {} transactions",
-            result.transactions.len()
+            "Total transaction history obtained: {} transactions",
+            all_transactions.len()
         );
-        Ok(result)
+
+        Ok(TransactionHistory {
+            transactions: all_transactions,
+            metadata: last_metadata
+                .ok_or_else(|| AppError::InvalidInput("Could not retrieve metadata".to_string()))?,
+        })
     }
 }
 

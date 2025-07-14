@@ -103,8 +103,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         &session,
                         &from,
                         &to,
-                        config.page_size,
-                        1, // Start with page 1
                     )
                     .await {
                     Ok(transactions) => transactions,
@@ -134,8 +132,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             &session,
                             &from,
                             &to,
-                            config.page_size,
-                            page,
                         )
                         .await {
                         Ok(page_data) => {

@@ -41,14 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get open transactions
     info!("Fetching open transactions...");
-    let mut transactions = match account_service
-        .get_transactions(
-            &session,
-            "2025-03-01T00:00:00Z",
-            "2025-04-01T00:00:00Z",
-            0,
-            1,
-        )
+    let transactions = match account_service
+        .get_transactions(&session, "2024-07-01T00:00:00Z", "2025-07-13T23:59:59Z")
         .await
     {
         Ok(transactions) => transactions,
@@ -66,13 +60,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         info!("Open transactions: {}", transactions.transactions.len());
 
-        for (i, transaction) in transactions.transactions.iter_mut().enumerate() {
+        for (i, transaction) in transactions.transactions.iter().enumerate() {
             // Log the transaction as pretty JSON
-            info!(
-                "Transactions #{}: {}",
-                i + 1,
-                serde_json::to_string_pretty(&serde_json::to_value(transaction).unwrap()).unwrap()
-            );
+            // info!(
+            //     "Transactions #{}: {}",
+            //     i + 1,
+            //     serde_json::to_string_pretty(&serde_json::to_value(transaction).unwrap()).unwrap()
+            // );
+            info!("Transactions #{}: {}", i + 1, transaction.instrument_name);
         }
     }
     let pool = config.pg_pool().await?;

@@ -52,13 +52,11 @@ pub trait AccountService: Send + Sync {
         to: &str,
     ) -> Result<AccountActivity, AppError>;
 
-    /// Gets transaction history
+    /// Gets transaction history for a given period, handling pagination automatically.
     async fn get_transactions(
         &self,
         session: &IgSession,
         from: &str,
         to: &str,
-        page_size: u32,
-        page_number: u32,
     ) -> Result<TransactionHistory, AppError>;
 }

@@ -102,7 +102,7 @@ impl MockHttpClient {
 
 #[async_trait]
 impl IgHttpClient for MockHttpClient {
-    async fn request<T: Serialize + std::marker::Send + std::marker::Sync, R: DeserializeOwned>(
+    async fn request<T: Serialize + Send + Sync, R: DeserializeOwned>(
         &self,
         _method: Method,
         path: &str,
@@ -121,10 +121,7 @@ impl IgHttpClient for MockHttpClient {
         self.create_response()
     }
 
-    async fn request_no_auth<
-        T: Serialize + std::marker::Send + std::marker::Sync,
-        R: DeserializeOwned,
-    >(
+    async fn request_no_auth<T: Serialize + Send + Sync, R: DeserializeOwned>(
         &self,
         _method: Method,
         _path: &str,
@@ -337,7 +334,7 @@ async fn test_account_service_get_activity_with_details() {
 async fn test_account_service_get_transactions() {
     // Create a mock client that expects the correct path with query parameters
     let expected_path =
-        "history/transactions?from=2023-01-01&to=2023-01-31&pageSize=50&pageNumber=2";
+        "history/transactions?from=2023-01-01&to=2023-01-31&pageSize=200&pageNumber=1";
     let mock_client = Arc::new(MockHttpClient::new(
         expected_path,
         ResponseType::TransactionHistory,
@@ -354,7 +351,7 @@ async fn test_account_service_get_transactions() {
 
     // Call the method - this will verify the path is correct
     let result = service
-        .get_transactions(&session, "2023-01-01", "2023-01-31", 50, 2)
+        .get_transactions(&session, "2023-01-01", "2023-01-31")
         .await;
     assert!(result.is_ok());
 }

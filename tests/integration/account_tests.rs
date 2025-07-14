@@ -166,7 +166,7 @@ fn test_get_transaction_history() {
         );
 
         let result = account_service
-            .get_transactions(&session, &from_str, &to_str, 20, 1)
+            .get_transactions(&session, &from_str, &to_str)
             .await
             .expect("Failed to get transaction history");
 
