@@ -126,9 +126,11 @@ impl MarketDatabaseService {
         .execute(&self.pool)
         .await?;
 
-        sqlx::query("DROP TRIGGER IF EXISTS update_market_instruments_updated_at ON market_instruments")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "DROP TRIGGER IF EXISTS update_market_instruments_updated_at ON market_instruments",
+        )
+        .execute(&self.pool)
+        .await?;
 
         sqlx::query(
             r#"
