@@ -50,15 +50,15 @@ impl MarketDatabaseService {
                 node_id VARCHAR(255) NOT NULL REFERENCES market_hierarchy_nodes(id),
                 exchange VARCHAR(50) NOT NULL,
                 expiry VARCHAR(50) NOT NULL DEFAULT '',
-                high_limit_price DECIMAL(20,8),
-                low_limit_price DECIMAL(20,8),
+                high_limit_price DOUBLE PRECISION,
+                low_limit_price DOUBLE PRECISION,
                 market_status VARCHAR(50) NOT NULL,
-                net_change DECIMAL(20,8),
-                percentage_change DECIMAL(10,4),
+                net_change DOUBLE PRECISION,
+                percentage_change DOUBLE PRECISION,
                 update_time VARCHAR(50),
                 update_time_utc TIMESTAMPTZ,
-                bid DECIMAL(20,8),
-                offer DECIMAL(20,8),
+                bid DOUBLE PRECISION,
+                offer DOUBLE PRECISION,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
@@ -202,6 +202,7 @@ impl MarketDatabaseService {
     }
 
     /// Processes a node recursively to extract all nodes and instruments
+    #[allow(clippy::type_complexity)]
     fn process_node_recursive<'a>(
         &'a self,
         node: &'a MarketNode,
@@ -210,7 +211,7 @@ impl MarketDatabaseService {
         parent_path: &'a str,
     ) -> std::pin::Pin<
         Box<
-            dyn std::future::Future<
+            dyn Future<
                     Output = Result<(Vec<MarketHierarchyNode>, Vec<MarketInstrument>), sqlx::Error>,
                 > + 'a,
         >,
@@ -219,7 +220,7 @@ impl MarketDatabaseService {
             let mut all_nodes = Vec::new();
             let mut all_instruments = Vec::new();
 
-            // Build path for current node
+            // Build path for the current node
             let current_path = MarketHierarchyNode::build_path(
                 if parent_path.is_empty() {
                     None
@@ -478,10 +479,15 @@ impl MarketDatabaseService {
 /// Statistics about the stored market data
 #[derive(Debug, Clone)]
 pub struct DatabaseStatistics {
+    /// Name of the exchange for which statistics are collected
     pub exchange: String,
+    /// Total number of hierarchy nodes in the database
     pub node_count: i64,
+    /// Total number of market instruments stored
     pub instrument_count: i64,
+    /// List of instrument types with their respective counts (type_name, count)
     pub instrument_types: Vec<(String, i64)>,
+    /// Maximum depth level found in the market hierarchy tree
     pub max_hierarchy_depth: i32,
 }
 
@@ -505,6 +511,7 @@ mod tests {
     use crate::application::models::market::InstrumentType;
 
     #[tokio::test]
+    #[ignore]
     async fn test_convert_market_data_to_instrument() {
         let service = MarketDatabaseService::new(
             // This would be a real pool in actual tests

@@ -85,6 +85,9 @@ CREATE INDEX IF NOT EXISTS idx_market_hierarchy_path ON market_hierarchy_nodes U
 CREATE INDEX IF NOT EXISTS idx_market_hierarchy_name ON market_hierarchy_nodes USING gin(to_tsvector('english', name));
 "#;
 
+/// SQL statement to create the market_instruments table with all necessary columns and indexes.
+/// This table stores detailed information about financial instruments including pricing data,
+/// market status, and relationships to hierarchy nodes.
 pub const CREATE_MARKET_INSTRUMENTS_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS market_instruments (
     epic VARCHAR(255) PRIMARY KEY,
@@ -206,10 +209,10 @@ impl MarketInstrument {
 
     /// Parses the update_time_utc from a string if available
     pub fn parse_update_time_utc(&mut self) {
-        if let Some(ref time_str) = self.update_time {
-            if let Ok(parsed_time) = DateTime::parse_from_rfc3339(time_str) {
-                self.update_time_utc = Some(parsed_time.with_timezone(&Utc));
-            }
+        if let Some(ref time_str) = self.update_time
+            && let Ok(parsed_time) = DateTime::parse_from_rfc3339(time_str)
+        {
+            self.update_time_utc = Some(parsed_time.with_timezone(&Utc));
         }
     }
 }

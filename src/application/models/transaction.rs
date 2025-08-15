@@ -36,16 +36,16 @@ impl From<AccountTransaction> for StoreTransaction {
     fn from(raw: AccountTransaction) -> Self {
         fn parse_period(period: &str) -> Option<NaiveDate> {
             // For format "DD-MON-YY"
-            if let Some((day_str, rest)) = period.split_once('-') {
-                if let Some((mon_str, year_str)) = rest.split_once('-') {
-                    // Try to parse the day
-                    if let Ok(day) = day_str.parse::<u32>() {
-                        let month = chrono::Month::from_str(mon_str).ok()?;
-                        let year = 2000 + year_str.parse::<i32>().ok()?;
+            if let Some((day_str, rest)) = period.split_once('-')
+                && let Some((mon_str, year_str)) = rest.split_once('-')
+            {
+                // Try to parse the day
+                if let Ok(day) = day_str.parse::<u32>() {
+                    let month = chrono::Month::from_str(mon_str).ok()?;
+                    let year = 2000 + year_str.parse::<i32>().ok()?;
 
-                        // Return the exact date
-                        return NaiveDate::from_ymd_opt(year, month.number_from_month(), day);
-                    }
+                    // Return the exact date
+                    return NaiveDate::from_ymd_opt(year, month.number_from_month(), day);
                 }
             }
 
