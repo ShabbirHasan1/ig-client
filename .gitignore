@@ -23,3 +23,4 @@ Cargo.lock
 /coverage/*.info
 /cobertura.xml
 /tarpaulin-report.html
+/examples/market/Data/market_hierarchy_backup.json
