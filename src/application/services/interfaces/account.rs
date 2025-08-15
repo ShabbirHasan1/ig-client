@@ -14,6 +14,13 @@ pub trait AccountService: Send + Sync {
     /// Gets open positions
     async fn get_positions(&self, session: &IgSession) -> Result<Positions, AppError>;
 
+    /// Gets open positions base in filter
+    async fn get_positions_w_filter(
+        &self,
+        filter: &str,
+        session: &IgSession,
+    ) -> Result<Positions, AppError>;
+
     /// Gets working orders
     async fn get_working_orders(&self, session: &IgSession) -> Result<WorkingOrders, AppError>;
 

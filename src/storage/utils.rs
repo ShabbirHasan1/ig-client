@@ -1,9 +1,11 @@
 use crate::application::models::transaction::StoreTransaction;
 use crate::error::AppError;
+use crate::storage::config::DatabaseConfig;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use sqlx::Executor;
+use sqlx::{Executor, PgPool};
+use tracing::info;
 
 /// Stores a list of transactions in the database
 ///
@@ -61,4 +63,49 @@ pub fn serialize_to_json<T: Serialize>(value: &T) -> Result<String, serde_json::
 /// Deserializes a JSON string into a value
 pub fn deserialize_from_json<T: DeserializeOwned>(s: &str) -> Result<T, serde_json::Error> {
     serde_json::from_str(s)
+}
+
+/// Creates a PostgreSQL connection pool from database configuration
+///
+/// # Arguments
+/// * `config` - Database configuration containing URL and max connections
+///
+/// # Returns
+/// * `Result<PgPool, AppError>` - Connection pool or an error
+pub async fn create_connection_pool(config: &DatabaseConfig) -> Result<PgPool, AppError> {
+    info!(
+        "Creating PostgreSQL connection pool with max {} connections",
+        config.max_connections
+    );
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(config.max_connections)
+        .connect(&config.url)
+        .await
+        .map_err(AppError::Db)?;
+
+    info!("PostgreSQL connection pool created successfully");
+    Ok(pool)
+}
+
+/// Creates a database configuration from environment variables
+///
+/// # Returns
+/// * `Result<DatabaseConfig, AppError>` - Database configuration or an error
+pub fn create_database_config_from_env() -> Result<DatabaseConfig, AppError> {
+    let url = std::env::var("DATABASE_URL").map_err(|_| {
+        AppError::InvalidInput("DATABASE_URL environment variable is required".to_string())
+    })?;
+
+    let max_connections = std::env::var("DATABASE_MAX_CONNECTIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse::<u32>()
+        .map_err(|e| {
+            AppError::InvalidInput(format!("Invalid DATABASE_MAX_CONNECTIONS value: {e}"))
+        })?;
+
+    Ok(DatabaseConfig {
+        url,
+        max_connections,
+    })
 }

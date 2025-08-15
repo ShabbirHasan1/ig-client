@@ -71,6 +71,48 @@ impl<T: IgHttpClient + 'static> AccountService for AccountServiceImpl<T> {
         Ok(result)
     }
 
+    /// Retrieves the current open positions and applies a client-side filter to them.
+    ///
+    /// This function first delegates to `get_positions` to fetch all open positions
+    /// and then narrows the result set in-memory using the provided `filter`.
+    /// The exact matching logic is implementation-defined for now (based on how the
+    /// filter predicate is applied within this function).
+    ///
+    /// Logging:
+    /// - Emits a debug log before and after fetching/filtering to aid observability.
+    ///
+    /// Arguments:
+    /// - `filter`: A string used to filter the list of positions. The matching
+    ///   semantics depend on the predicate used in this function (e.g., substring
+    ///   match against one or more `Position` fields).
+    /// - `session`: An authenticated IG session used to authorize the HTTP request.
+    ///
+    /// Returns:
+    /// - `Ok(Positions)`: The filtered collection of open positions.
+    /// - `Err(AppError)`: If fetching or processing fails. Possible error sources
+    ///   include network issues, deserialization errors, authorization failures,
+    ///   rate limiting, or invalid input.
+    ///
+    async fn get_positions_w_filter(
+        &self,
+        filter: &str,
+        session: &IgSession,
+    ) -> Result<Positions, AppError> {
+        debug!("Getting open positions with filter: {}", filter);
+
+        let mut positions = self.get_positions(session).await?;
+
+        positions
+            .positions
+            .retain(|position| position.market.epic.contains(filter));
+
+        debug!(
+            "Positions obtained after filtering: {} positions",
+            positions.positions.len()
+        );
+        Ok(positions)
+    }
+
     async fn get_working_orders(&self, session: &IgSession) -> Result<WorkingOrders, AppError> {
         info!("Getting working orders");
 

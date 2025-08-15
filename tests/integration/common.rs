@@ -27,7 +27,7 @@ pub fn create_test_client(config: Arc<Config>) -> Arc<IgHttpClientImpl> {
 }
 
 /// Creates an authenticator for tests
-pub fn create_test_auth(config: &Config) -> IgAuth {
+pub fn create_test_auth(config: &Config) -> IgAuth<'_> {
     IgAuth::new(config)
 }
 
