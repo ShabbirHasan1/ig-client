@@ -100,6 +100,9 @@ pub enum TimeInForce {
 /// Model for creating a new order
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateOrderRequest {
+    /// Deal identifier for existing positions
+    #[serde(rename = "dealId", skip_serializing_if = "Option::is_none")]
+    pub deal_id: Option<String>,
     /// Instrument EPIC identifier
     pub epic: String,
     /// Order direction (buy or sell)
@@ -142,12 +145,16 @@ pub struct CreateOrderRequest {
     /// Currency code for the order (e.g., "USD", "EUR")
     #[serde(rename = "currencyCode", skip_serializing_if = "Option::is_none")]
     pub currency_code: Option<String>,
+    /// Quote identifier for the order
+    #[serde(rename = "quoteId", skip_serializing_if = "Option::is_none")]
+    pub quote_id: Option<String>,
 }
 
 impl CreateOrderRequest {
     /// Creates a new market order
     pub fn market(epic: String, direction: Direction, size: f64) -> Self {
         Self {
+            deal_id: None,
             epic,
             direction,
             size,
@@ -163,12 +170,14 @@ impl CreateOrderRequest {
             deal_reference: None,
             force_open: Some(true),
             currency_code: None,
+            quote_id: None,
         }
     }
 
     /// Creates a new limit order
     pub fn limit(epic: String, direction: Direction, size: f64, level: f64) -> Self {
         Self {
+            deal_id: None,
             epic,
             direction,
             size,
@@ -184,6 +193,7 @@ impl CreateOrderRequest {
             deal_reference: None,
             force_open: Some(true),
             currency_code: None,
+            quote_id: None,
         }
     }
 
@@ -241,6 +251,7 @@ impl CreateOrderRequest {
         };
 
         Self {
+            deal_id: None,
             epic: epic.clone(),
             direction: Direction::Sell,
             size: rounded_size,
@@ -256,6 +267,7 @@ impl CreateOrderRequest {
             deal_reference: deal_reference.clone(),
             force_open: Some(true),
             currency_code,
+            quote_id: None,
         }
     }
 
@@ -316,6 +328,7 @@ impl CreateOrderRequest {
             deal_reference
         };
         Self {
+            deal_id: None,
             epic: epic.clone(),
             direction: Direction::Sell,
             size: rounded_size,
@@ -331,6 +344,7 @@ impl CreateOrderRequest {
             deal_reference: deal_reference.clone(),
             force_open,
             currency_code,
+            quote_id: None,
         }
     }
 
@@ -373,6 +387,7 @@ impl CreateOrderRequest {
             deal_reference
         };
         Self {
+            deal_id: None,
             epic: epic.clone(),
             direction: Direction::Buy,
             size: rounded_size,
@@ -388,6 +403,7 @@ impl CreateOrderRequest {
             deal_reference: deal_reference.clone(),
             force_open: Some(true),
             currency_code: currency_code.clone(),
+            quote_id: None,
         }
     }
 
@@ -442,6 +458,7 @@ impl CreateOrderRequest {
             deal_reference
         };
         Self {
+            deal_id: None,
             epic: epic.clone(),
             direction: Direction::Buy,
             size: rounded_size,
@@ -457,6 +474,7 @@ impl CreateOrderRequest {
             deal_reference: deal_reference.clone(),
             force_open,
             currency_code: currency_code.clone(),
+            quote_id: None,
         }
     }
 
@@ -577,27 +595,26 @@ pub struct ClosePositionRequest {
     pub deal_id: Option<String>,
     /// Direction of the closing order (opposite to the position)
     pub direction: Direction,
-    /// Size/quantity to close
-    pub size: f64,
-    /// Type of order to use for closing
-    #[serde(rename = "orderType")]
-    pub order_type: OrderType,
-    /// Order duration for the closing order
-    #[serde(rename = "timeInForce")]
-    pub time_in_force: TimeInForce,
-    /// Price level for limit close orders
-    #[serde(rename = "level", skip_serializing_if = "Option::is_none")]
-    pub level: Option<f64>,
-    /// Expiry date for the order
-    #[serde(rename = "expiry", skip_serializing_if = "Option::is_none")]
-    pub expiry: Option<String>,
     /// Instrument EPIC identifier
     #[serde(skip_serializing_if = "Option::is_none")]
     pub epic: Option<String>,
-
+    /// Expiry date for the order
+    #[serde(rename = "expiry", skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<String>,
+    /// Price level for limit close orders
+    #[serde(rename = "level", skip_serializing_if = "Option::is_none")]
+    pub level: Option<f64>,
+    /// Type of order to use for closing
+    #[serde(rename = "orderType")]
+    pub order_type: OrderType,
     /// Quote identifier for the order, used for certain order types that require a specific quote
     #[serde(rename = "quoteId", skip_serializing_if = "Option::is_none")]
     pub quote_id: Option<String>,
+    /// Size/quantity to close
+    pub size: f64,
+    /// Order duration for the closing order
+    #[serde(rename = "timeInForce")]
+    pub time_in_force: TimeInForce,
 }
 
 impl ClosePositionRequest {

@@ -354,3 +354,195 @@ fn test_deserialize_nullable_status() {
     let result: TestStatus = serde_json::from_value(json_with_null).unwrap();
     assert_eq!(result.status, Status::Rejected);
 }
+
+// Serialization and Deserialization Tests for CreateOrderRequest and ClosePositionRequest
+
+#[test]
+fn test_create_order_request_deserialization() {
+    let json_data = r#"
+    {
+      "dealId": null,
+      "epic": "DO.D.OTCDSTXE.GG.IP",
+      "expiry": "20-AUG-25",
+      "direction": "SELL",
+      "size": 5.25,
+      "level": 0.0,
+      "orderType": "LIMIT",
+      "timeInForce": "FILL_OR_KILL",
+      "quoteId": null
+    }
+    "#;
+
+    let order: CreateOrderRequest = serde_json::from_str(json_data).unwrap();
+
+    assert_eq!(order.deal_id, None);
+    assert_eq!(order.epic, "DO.D.OTCDSTXE.GG.IP");
+    assert_eq!(order.expiry, Some("20-AUG-25".to_string()));
+    assert_eq!(order.direction, Direction::Sell);
+    assert_eq!(order.size, 5.25);
+    assert_eq!(order.level, Some(0.0));
+    assert_eq!(order.order_type, OrderType::Limit);
+    assert_eq!(order.time_in_force, TimeInForce::FillOrKill);
+    assert_eq!(order.quote_id, None);
+}
+
+#[test]
+fn test_create_order_request_serialization() {
+    let order = CreateOrderRequest {
+        deal_id: None,
+        epic: "DO.D.OTCDSTXE.GG.IP".to_string(),
+        direction: Direction::Sell,
+        size: 5.25,
+        order_type: OrderType::Limit,
+        time_in_force: TimeInForce::FillOrKill,
+        level: Some(0.0),
+        guaranteed_stop: None,
+        stop_level: None,
+        stop_distance: None,
+        limit_level: None,
+        limit_distance: None,
+        expiry: Some("20-AUG-25".to_string()),
+        deal_reference: None,
+        force_open: None,
+        currency_code: None,
+        quote_id: None,
+    };
+
+    let serialized = serde_json::to_string(&order).unwrap();
+    let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+    // Verify key fields are present and correct
+    assert_eq!(json_value["epic"], "DO.D.OTCDSTXE.GG.IP");
+    assert_eq!(json_value["direction"], "SELL");
+    assert_eq!(json_value["size"], 5.25);
+    assert_eq!(json_value["level"], 0.0);
+    assert_eq!(json_value["orderType"], "LIMIT");
+    assert_eq!(json_value["timeInForce"], "FILL_OR_KILL");
+    assert_eq!(json_value["expiry"], "20-AUG-25");
+}
+
+#[test]
+fn test_close_position_request_deserialization() {
+    let json_data = r#"
+    {
+      "currencyCode": "EUR",
+      "direction": "SELL",
+      "epic": "DO.D.OTCDSTXE.GG.IP",
+      "expiry": "20-AUG-25",
+      "forceOpen": false,
+      "guaranteedStop": false,
+      "level": 0.0,
+      "orderType": "LIMIT",
+      "size": 5.25,
+      "timeInForce": "FILL_OR_KILL"
+    }
+    "#;
+
+    let request: ClosePositionRequest = serde_json::from_str(json_data).unwrap();
+
+    assert_eq!(request.direction, Direction::Sell);
+    assert_eq!(request.epic, Some("DO.D.OTCDSTXE.GG.IP".to_string()));
+    assert_eq!(request.expiry, Some("20-AUG-25".to_string()));
+    assert_eq!(request.level, Some(0.0));
+    assert_eq!(request.order_type, OrderType::Limit);
+    assert_eq!(request.size, 5.25);
+    assert_eq!(request.time_in_force, TimeInForce::FillOrKill);
+}
+
+#[test]
+fn test_close_position_request_serialization() {
+    let request = ClosePositionRequest {
+        deal_id: None,
+        direction: Direction::Sell,
+        size: 5.25,
+        order_type: OrderType::Limit,
+        time_in_force: TimeInForce::FillOrKill,
+        level: Some(0.0),
+        expiry: Some("20-AUG-25".to_string()),
+        epic: Some("DO.D.OTCDSTXE.GG.IP".to_string()),
+        quote_id: None,
+    };
+
+    let serialized = serde_json::to_string(&request).unwrap();
+    let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+
+    // Verify key fields are present and correct
+    assert_eq!(json_value["direction"], "SELL");
+    assert_eq!(json_value["epic"], "DO.D.OTCDSTXE.GG.IP");
+    assert_eq!(json_value["expiry"], "20-AUG-25");
+    assert_eq!(json_value["level"], 0.0);
+    assert_eq!(json_value["orderType"], "LIMIT");
+    assert_eq!(json_value["size"], 5.25);
+    assert_eq!(json_value["timeInForce"], "FILL_OR_KILL");
+}
+
+#[test]
+fn test_create_order_request_serialization_round_trip() {
+    let json_data = r#"
+    {
+      "dealId": null,
+      "epic": "DO.D.OTCDSTXE.GG.IP",
+      "expiry": "20-AUG-25",
+      "direction": "SELL",
+      "size": 5.25,
+      "level": 0.0,
+      "orderType": "LIMIT",
+      "timeInForce": "FILL_OR_KILL",
+      "quoteId": null
+    }
+    "#;
+
+    // Deserialize JSON to struct
+    let order: CreateOrderRequest = serde_json::from_str(json_data).unwrap();
+
+    // Serialize struct back to JSON
+    let serialized = serde_json::to_string(&order).unwrap();
+
+    // Deserialize again to verify round-trip consistency
+    let order_round_trip: CreateOrderRequest = serde_json::from_str(&serialized).unwrap();
+
+    // Verify key fields match
+    assert_eq!(order.epic, order_round_trip.epic);
+    assert_eq!(order.direction, order_round_trip.direction);
+    assert_eq!(order.size, order_round_trip.size);
+    assert_eq!(order.level, order_round_trip.level);
+    assert_eq!(order.order_type, order_round_trip.order_type);
+    assert_eq!(order.time_in_force, order_round_trip.time_in_force);
+    assert_eq!(order.expiry, order_round_trip.expiry);
+}
+
+#[test]
+fn test_close_position_request_serialization_round_trip() {
+    let json_data = r#"
+    {
+      "currencyCode": "EUR",
+      "direction": "SELL",
+      "epic": "DO.D.OTCDSTXE.GG.IP",
+      "expiry": "20-AUG-25",
+      "forceOpen": false,
+      "guaranteedStop": false,
+      "level": 0.0,
+      "orderType": "LIMIT",
+      "size": 5.25,
+      "timeInForce": "FILL_OR_KILL"
+    }
+    "#;
+
+    // Deserialize JSON to struct
+    let request: ClosePositionRequest = serde_json::from_str(json_data).unwrap();
+
+    // Serialize struct back to JSON
+    let serialized = serde_json::to_string(&request).unwrap();
+
+    // Deserialize again to verify round-trip consistency
+    let request_round_trip: ClosePositionRequest = serde_json::from_str(&serialized).unwrap();
+
+    // Verify key fields match
+    assert_eq!(request.direction, request_round_trip.direction);
+    assert_eq!(request.size, request_round_trip.size);
+    assert_eq!(request.level, request_round_trip.level);
+    assert_eq!(request.order_type, request_round_trip.order_type);
+    assert_eq!(request.time_in_force, request_round_trip.time_in_force);
+    assert_eq!(request.epic, request_round_trip.epic);
+    assert_eq!(request.expiry, request_round_trip.expiry);
+}
