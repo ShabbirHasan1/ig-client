@@ -122,7 +122,7 @@ impl<T: IgHttpClient + 'static> OrderService for OrderServiceImpl<T> {
         use reqwest::Client;
         use tracing::error;
 
-        info!("{}", serde_json::to_string(close_request)?);
+        debug!("{}", serde_json::to_string(close_request)?);
 
         // Create a direct POST request with _method: DELETE header
         // This works around HTTP client limitations with DELETE + body
