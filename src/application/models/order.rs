@@ -649,7 +649,7 @@ impl ClosePositionRequest {
             Direction::Buy => Some(DEFAULT_ORDER_BUY_SIZE),
             Direction::Sell => Some(DEFAULT_ORDER_SELL_SIZE),
         };
-        
+
         Self {
             deal_id: Some(deal_id),
             direction,
@@ -686,7 +686,7 @@ impl ClosePositionRequest {
             Direction::Buy => Some(DEFAULT_ORDER_BUY_SIZE),
             Direction::Sell => Some(DEFAULT_ORDER_SELL_SIZE),
         };
-        
+
         Self {
             deal_id: None,
             direction,
