@@ -573,7 +573,7 @@ pub struct UpdatePositionRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClosePositionRequest {
     /// Unique identifier for the position to close
-    #[serde(rename = "dealId")]
+    #[serde(rename = "dealId", skip_serializing_if = "Option::is_none")]
     pub deal_id: Option<String>,
     /// Direction of the closing order (opposite to the position)
     pub direction: Direction,
@@ -589,13 +589,14 @@ pub struct ClosePositionRequest {
     #[serde(rename = "level", skip_serializing_if = "Option::is_none")]
     pub level: Option<f64>,
     /// Expiry date for the order
-    #[serde(rename = "expiry")]
+    #[serde(rename = "expiry", skip_serializing_if = "Option::is_none")]
     pub expiry: Option<String>,
     /// Instrument EPIC identifier
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub epic: Option<String>,
 
     /// Quote identifier for the order, used for certain order types that require a specific quote
-    #[serde(rename = "quoteId")]
+    #[serde(rename = "quoteId", skip_serializing_if = "Option::is_none")]
     pub quote_id: Option<String>,
 }
 
@@ -642,10 +643,13 @@ impl ClosePositionRequest {
     /// * `direction` - The direction of the closing order (opposite of the position direction)
     /// * `size` - The size of the position to close
     pub fn close_option_to_market_by_id(deal_id: String, direction: Direction, size: f64) -> Self {
+        // For options, we need to use limit orders with appropriate levels
+        // Use reasonable levels based on direction to ensure fill while being accepted
         let level = match direction {
             Direction::Buy => Some(DEFAULT_ORDER_BUY_SIZE),
             Direction::Sell => Some(DEFAULT_ORDER_SELL_SIZE),
         };
+        
         Self {
             deal_id: Some(deal_id),
             direction,
@@ -676,10 +680,13 @@ impl ClosePositionRequest {
         direction: Direction,
         size: f64,
     ) -> Self {
+        // For options, we need to use limit orders with appropriate levels
+        // Use reasonable levels based on direction to ensure fill while being accepted
         let level = match direction {
             Direction::Buy => Some(DEFAULT_ORDER_BUY_SIZE),
             Direction::Sell => Some(DEFAULT_ORDER_SELL_SIZE),
         };
+        
         Self {
             deal_id: None,
             direction,
