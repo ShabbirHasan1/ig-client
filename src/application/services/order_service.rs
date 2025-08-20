@@ -118,20 +118,45 @@ impl<T: IgHttpClient + 'static> OrderService for OrderServiceImpl<T> {
         session: &IgSession,
         close_request: &ClosePositionRequest,
     ) -> Result<ClosePositionResponse, AppError> {
+        use reqwest::Client;
+        use crate::constants::USER_AGENT;
+        use tracing::error;
+        
         info!("{}", serde_json::to_string(close_request)?);
-        let result = self
-            .client
-            .request::<ClosePositionRequest, ClosePositionResponse>(
-                Method::DELETE,
-                "positions/otc",
-                session,
-                Some(close_request),
-                "1",
-            )
+        
+        // Create a direct POST request with _method: DELETE header
+        // This works around HTTP client limitations with DELETE + body
+        let url = format!("{}/positions/otc", self.config.rest_api.base_url);
+        
+        // Respect rate limits before making the request
+        session.respect_rate_limit().await?;
+        
+        let client = Client::new();
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .header("Accept", "application/json; charset=utf-8")
+            .header("User-Agent", USER_AGENT)
+            .header("Version", "1")
+            .header("X-IG-API-KEY", &self.config.credentials.api_key)
+            .header("CST", &session.cst)
+            .header("X-SECURITY-TOKEN", &session.token)
+            .header("_method", "DELETE")  // This is the key header for IG API
+            .json(close_request)
+            .send()
             .await?;
 
-        debug!("Position closed with reference: {}", result.deal_reference);
-        Ok(result)
+        let status = response.status();
+        let response_text = response.text().await?;
+
+        if status.is_success() {
+            let close_response: ClosePositionResponse = serde_json::from_str(&response_text)?;
+            debug!("Position closed with reference: {}", close_response.deal_reference);
+            Ok(close_response)
+        } else {
+            error!("Unexpected status code {} for request to {}: {}", status, url, response_text);
+            Err(AppError::Unexpected(status))
+        }
     }
 
     async fn get_working_orders(&self, session: &IgSession) -> Result<WorkingOrders, AppError> {
