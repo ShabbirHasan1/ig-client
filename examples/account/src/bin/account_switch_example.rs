@@ -1,14 +1,14 @@
+use chrono::{Duration, Utc};
+use ig_client::application::services::AccountService;
+use ig_client::application::services::account_service::AccountServiceImpl;
 use ig_client::config::Config;
 use ig_client::session::auth::IgAuth;
 use ig_client::session::interface::IgAuthenticator;
+use ig_client::transport::http_client::IgHttpClientImpl;
 use ig_client::utils::logger::setup_logger;
 use std::error::Error;
 use std::sync::Arc;
-use chrono::{Duration, Utc};
 use tracing::{error, info};
-use ig_client::application::services::account_service::AccountServiceImpl;
-use ig_client::application::services::AccountService;
-use ig_client::transport::http_client::IgHttpClientImpl;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -42,7 +42,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let account_id = cfg.credentials.account_id.trim().to_string();
 
     session = if !account_id.is_empty() && session.account_id != account_id {
-
         let default_account = false;
 
         // Switch to the specified account
@@ -70,7 +69,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     } else {
         info!("Account switch skipped - no account ID provided");
-        session       
+        session
     };
 
     let http_client = Arc::new(IgHttpClientImpl::new(Arc::new(cfg.clone())));
@@ -84,16 +83,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Fetching transactions from {} to {}", from, to);
 
     // Fetch all transactions using the updated method
-    let _all_transactions = match account_service
-        .get_transactions(&session, &from, &to)
-        .await
-    {
+    let _all_transactions = match account_service.get_transactions(&session, &from, &to).await {
         Ok(transactions) => transactions,
         Err(e) => {
             error!("Failed to fetch transactions: {e:?}");
             return Err(Box::new(e) as Box<dyn Error>);
         }
     };
-    
+
     Ok(())
 }

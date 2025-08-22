@@ -443,7 +443,9 @@ impl IgAuthenticator for IgAuth<'_> {
                         token_str.to_owned()
                     }
                     None => {
-                        debug!("X-SECURITY-TOKEN header not found in switch response, using existing token");
+                        debug!(
+                            "X-SECURITY-TOKEN header not found in switch response, using existing token"
+                        );
                         session.token.clone()
                     }
                 };
