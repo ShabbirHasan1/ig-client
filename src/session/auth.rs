@@ -408,16 +408,55 @@ impl IgAuthenticator for IgAuth<'_> {
 
         match resp.status() {
             StatusCode::OK => {
+                // IMPORTANT: Extract CST and X-SECURITY-TOKEN from headers
+                // When switching accounts, IG API returns new security tokens in the response headers
+                // that must be used for subsequent API calls. Using the old tokens will result in
+                // "error.security.account-token-invalid" errors for all future requests.
+                // This was the root cause of the bug where switch_account appeared to work but
+                // subsequent API calls failed with authentication errors.
+                let new_cst = match resp.headers().get("CST") {
+                    Some(value) => {
+                        let cst_str = value
+                            .to_str()
+                            .map_err(|_| AuthError::Unexpected(StatusCode::OK))?;
+                        debug!(
+                            "Successfully obtained new CST token of length: {}",
+                            cst_str.len()
+                        );
+                        cst_str.to_owned()
+                    }
+                    None => {
+                        debug!("CST header not found in switch response, using existing token");
+                        session.cst.clone()
+                    }
+                };
+
+                let new_token = match resp.headers().get("X-SECURITY-TOKEN") {
+                    Some(value) => {
+                        let token_str = value
+                            .to_str()
+                            .map_err(|_| AuthError::Unexpected(StatusCode::OK))?;
+                        debug!(
+                            "Successfully obtained new X-SECURITY-TOKEN of length: {}",
+                            token_str.len()
+                        );
+                        token_str.to_owned()
+                    }
+                    None => {
+                        debug!("X-SECURITY-TOKEN header not found in switch response, using existing token");
+                        session.token.clone()
+                    }
+                };
+
                 // Parse the response body
                 let switch_response: AccountSwitchResponse = resp.json().await?;
                 debug!("Account switch successful");
                 trace!("Account switch response: {:?}", switch_response);
 
-                // Return a new session with the updated account ID and the config's rate limiter settings
-                // The CST and token remain the same
+                // Return a new session with the updated account ID and new tokens from the response headers
                 Ok(IgSession::from_config(
-                    session.cst.clone(),
-                    session.token.clone(),
+                    new_cst,
+                    new_token,
                     account_id.to_string(),
                     self.cfg,
                 ))
