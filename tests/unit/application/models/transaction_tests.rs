@@ -214,6 +214,73 @@ fn test_transaction_list_from_account_transactions() {
 }
 
 #[test]
+fn test_profit_and_loss_parsing_with_comma_separators() {
+    // Test case 1: Value with comma separator (thousands)
+    let account_tx_with_comma = AccountTransaction {
+        date: "2025-05-15T10:30:00".to_string(),
+        date_utc: "2025-05-15T10:30:00".to_string(),
+        open_date_utc: "2025-05-15T09:00:00".to_string(),
+        instrument_name: "Daily Gold (Aug Future) 2000 CALL".to_string(),
+        period: "MAY-25".to_string(),
+        profit_and_loss: "E1,000.50".to_string(), // Value with comma
+        transaction_type: "DEAL".to_string(),
+        reference: "TEST1234".to_string(),
+        open_level: "1950.5".to_string(),
+        close_level: "2050.75".to_string(),
+        size: "1".to_string(),
+        currency: "EUR".to_string(),
+        cash_transaction: false,
+    };
+
+    // Test case 2: Value without comma separator
+    let account_tx_without_comma = AccountTransaction {
+        date: "2025-05-15T10:30:00".to_string(),
+        date_utc: "2025-05-15T10:30:00".to_string(),
+        open_date_utc: "2025-05-15T09:00:00".to_string(),
+        instrument_name: "Daily Gold (Aug Future) 2000 CALL".to_string(),
+        period: "MAY-25".to_string(),
+        profit_and_loss: "E300.00".to_string(), // Value without comma
+        transaction_type: "DEAL".to_string(),
+        reference: "TEST5678".to_string(),
+        open_level: "1950.5".to_string(),
+        close_level: "2050.75".to_string(),
+        size: "1".to_string(),
+        currency: "EUR".to_string(),
+        cash_transaction: false,
+    };
+
+    // Test case 3: Large value with multiple comma separators
+    let account_tx_large_value = AccountTransaction {
+        date: "2025-05-15T10:30:00".to_string(),
+        date_utc: "2025-05-15T10:30:00".to_string(),
+        open_date_utc: "2025-05-15T09:00:00".to_string(),
+        instrument_name: "Daily Gold (Aug Future) 2000 CALL".to_string(),
+        period: "MAY-25".to_string(),
+        profit_and_loss: "E1,234,567.89".to_string(), // Large value with multiple commas
+        transaction_type: "DEAL".to_string(),
+        reference: "TEST9999".to_string(),
+        open_level: "1950.5".to_string(),
+        close_level: "2050.75".to_string(),
+        size: "1".to_string(),
+        currency: "EUR".to_string(),
+        cash_transaction: false,
+    };
+
+    // Convert to StoreTransaction and verify parsing
+    let store_tx1 = StoreTransaction::from(account_tx_with_comma);
+    let store_tx2 = StoreTransaction::from(account_tx_without_comma);
+    let store_tx3 = StoreTransaction::from(account_tx_large_value);
+
+    // Verify that comma-separated values are parsed correctly
+    assert_eq!(store_tx1.pnl_eur, 1000.50, "Failed to parse E1,000.50");
+    assert_eq!(store_tx2.pnl_eur, 300.00, "Failed to parse E300.00");
+    assert_eq!(
+        store_tx3.pnl_eur, 1234567.89,
+        "Failed to parse E1,234,567.89"
+    );
+}
+
+#[test]
 fn test_transaction_list_as_ref() {
     // Create a simple TransactionList with mock data
     let store_tx1 = StoreTransaction::from(AccountTransaction {

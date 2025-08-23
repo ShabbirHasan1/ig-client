@@ -102,6 +102,7 @@ impl From<AccountTransaction> for StoreTransaction {
         let pnl_eur = raw
             .profit_and_loss
             .trim_start_matches('E')
+            .replace(',', "") // Remove comma separators for thousands
             .parse::<f64>()
             .unwrap_or(0.0);
 
@@ -145,8 +146,8 @@ impl AsRef<[StoreTransaction]> for TransactionList {
 impl From<&Vec<AccountTransaction>> for TransactionList {
     fn from(raw: &Vec<AccountTransaction>) -> Self {
         TransactionList(
-            raw.iter() // Usa iter() en lugar de into_iter() para referencias
-                .map(StoreTransaction::from) // Esto asume que hay un impl From<&AccountTransaction> for StoreTransaction
+            raw.iter() // Use iter() instead of into_iter() for references
+                .map(StoreTransaction::from) // This assumes there is an impl From<&AccountTransaction> for StoreTransaction
                 .collect(),
         )
     }
