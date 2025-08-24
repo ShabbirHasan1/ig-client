@@ -370,9 +370,9 @@ pub struct MarketNode {
     /// Node name
     pub name: String,
     /// Child nodes
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub children: Vec<MarketNode>,
     /// Markets in this node
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub markets: Vec<MarketData>,
 }
