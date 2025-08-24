@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use rand;
 use reqwest::{Client, StatusCode};
 use std::time::Duration;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// Authentication handler for IG Markets API
 pub struct IgAuth<'a> {
@@ -481,6 +481,49 @@ impl IgAuthenticator for IgAuth<'_> {
                 }
 
                 Err(AuthError::Unexpected(other))
+            }
+        }
+    }
+
+    async fn login_and_switch_account(
+        &self,
+        account_id: &str,
+        default_account: Option<bool>,
+    ) -> Result<IgSession, AuthError> {
+        let session = self.login().await?;
+        info!("Login successful");
+
+        // Switch to the correct account if needed
+        match self
+            .switch_account(&session, account_id, default_account)
+            .await
+        {
+            Ok(new_session) => {
+                info!("✅ Switched to account: {}", new_session.account_id);
+                Ok(new_session)
+            }
+            Err(e) => {
+                warn!(
+                    "Could not switch to account {}: {:?}. Attempting to re-authenticate.",
+                    account_id, e
+                );
+
+                match self.login().await {
+                    Ok(new_session) => {
+                        info!(
+                            "Re-authentication successful. Using account: {}",
+                            new_session.account_id
+                        );
+                        Ok(new_session)
+                    }
+                    Err(login_err) => {
+                        error!(
+                            "Re-authentication failed: {:?}. Using original session.",
+                            login_err
+                        );
+                        Ok(session)
+                    }
+                }
             }
         }
     }

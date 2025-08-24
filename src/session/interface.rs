@@ -170,6 +170,7 @@ pub trait IgAuthenticator: Send + Sync {
     async fn login(&self) -> Result<IgSession, AuthError>;
     /// Refreshes an existing session with the IG Markets API
     async fn refresh(&self, session: &IgSession) -> Result<IgSession, AuthError>;
+
     /// Switches the active account for the current session
     ///
     /// # Arguments
@@ -182,6 +183,40 @@ pub trait IgAuthenticator: Send + Sync {
     async fn switch_account(
         &self,
         session: &IgSession,
+        account_id: &str,
+        default_account: Option<bool>,
+    ) -> Result<IgSession, AuthError>;
+
+    /// Attempts to login and switch to the specified account, optionally setting it as the default account.
+    ///
+    /// # Arguments
+    ///
+    /// * `account_id` - A string slice that holds the ID of the account to which the session should switch.
+    /// * `default_account` - An optional boolean parameter. If `Some(true)`, the given account will be marked
+    ///   as the default account for subsequent operations. If `None` or `Some(false)`, the account will not
+    ///   be set as default.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a `Result`:
+    /// * `Ok(IgSession)` - On success, contains an updated `IgSession` object representing the active session
+    ///   state after the switch.
+    /// * `Err(AuthError)` - If the operation fails, returns an `AuthError` containing details about the issue.
+    ///
+    /// # Errors
+    ///
+    /// This function can return `AuthError` in the following scenarios:
+    /// * If the provided `account_id` is invalid or does not exist.
+    /// * If there is a network issue during the login/switch process.
+    /// * If there are authentication or session-related failures.
+    ///
+    /// # Notes
+    ///
+    /// Ensure that the `account_id` is valid and accessible under the authenticated user's account scope.
+    /// Switching accounts may invalidate the previous session if the platform enforces single-session
+    /// restrictions.
+    async fn login_and_switch_account(
+        &self,
         account_id: &str,
         default_account: Option<bool>,
     ) -> Result<IgSession, AuthError>;
