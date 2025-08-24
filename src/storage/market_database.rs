@@ -1,6 +1,9 @@
 use crate::application::models::market::{MarketData, MarketNode};
 use crate::storage::market_persistence::{MarketHierarchyNode, MarketInstrument};
+use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Row};
+use std::collections::HashMap;
+use std::future::Future;
 use tracing::info;
 
 /// Service for managing market data persistence in PostgreSQL
@@ -198,6 +201,168 @@ impl MarketDatabaseService {
             "Successfully stored {} hierarchy nodes and {} instruments",
             node_count, instrument_count
         );
+        Ok(())
+    }
+
+    /// Stores filtered market nodes with specific epic format in a custom table
+    /// Only processes MarketNode.children where epic has format "XX.X.XXXXXXX.XX.XX" (4 dots)
+    /// Adds a symbol field based on the provided HashMap mapping
+    pub async fn store_filtered_market_nodes(
+        &self,
+        hierarchy: &[MarketNode],
+        symbol_map: &HashMap<&str, &str>,
+        table_name: &str,
+    ) -> Result<(), sqlx::Error> {
+        info!(
+            "Storing filtered market nodes to table '{}' with {} top-level nodes",
+            table_name,
+            hierarchy.len()
+        );
+
+        // Start a transaction
+        let mut tx = self.pool.begin().await?;
+
+        // Create table if it doesn't exist
+        let create_table_sql = format!(
+            r#"
+            CREATE TABLE IF NOT EXISTS {} (
+                epic VARCHAR(255) PRIMARY KEY,
+                instrumentName TEXT NOT NULL,
+                instrumentType VARCHAR(50) NOT NULL,
+                expiry VARCHAR(50),
+                lastUpdateUTC TIMESTAMP,
+                symbol VARCHAR(50)
+            )
+            "#,
+            table_name
+        );
+
+        tx.execute(sqlx::query(&create_table_sql)).await?;
+
+        // Note: No DELETE operation - using UPSERT to update existing records
+
+        let mut inserted_count = 0;
+
+        // Process all nodes recursively to find filtered markets
+        for node in hierarchy {
+            inserted_count += self
+                .process_filtered_node_recursive(node, symbol_map, table_name, &mut tx)
+                .await?;
+        }
+
+        // Commit transaction
+        tx.commit().await?;
+
+        info!(
+            "Successfully stored {} filtered instruments in table '{}'",
+            inserted_count, table_name
+        );
+        Ok(())
+    }
+
+    /// Recursively processes nodes to find and insert filtered markets
+    fn process_filtered_node_recursive<'a>(
+        &'a self,
+        node: &'a MarketNode,
+        symbol_map: &'a HashMap<&str, &str>,
+        table_name: &'a str,
+        tx: &'a mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<i32, sqlx::Error>> + 'a>> {
+        Box::pin(async move {
+            let mut count = 0;
+
+            // Process markets in current node
+            for market in &node.markets {
+                if self.is_valid_epic_format(&market.epic) {
+                    let symbol = self.find_symbol_for_market(&market.instrument_name, symbol_map);
+                    self.insert_filtered_market(market, &symbol, table_name, tx)
+                        .await?;
+                    count += 1;
+                }
+            }
+
+            // Process children recursively
+            for child in &node.children {
+                count += self
+                    .process_filtered_node_recursive(child, symbol_map, table_name, tx)
+                    .await?;
+            }
+
+            Ok(count)
+        })
+    }
+
+    /// Checks if epic has the required format: "XX.X.XXXXXXX.XX.XX" (exactly 4 dots)
+    fn is_valid_epic_format(&self, epic: &str) -> bool {
+        epic.matches('.').count() == 4
+    }
+
+    /// Finds the appropriate symbol for a market based on its name
+    fn find_symbol_for_market(
+        &self,
+        instrument_name: &str,
+        symbol_map: &HashMap<&str, &str>,
+    ) -> String {
+        let name_lower = instrument_name.to_lowercase();
+
+        for (key, value) in symbol_map {
+            if name_lower.contains(&key.to_lowercase()) {
+                return value.to_string();
+            }
+        }
+
+        // Default symbol if no match found
+        "UNKNOWN".to_string()
+    }
+
+    /// Converts updateTime from milliseconds to formatted timestamp
+    fn convert_update_time(&self, update_time: &Option<String>) -> Option<DateTime<Utc>> {
+        if let Some(time_str) = update_time
+            && let Ok(timestamp_ms) = time_str.parse::<i64>()
+        {
+            let timestamp_secs = timestamp_ms / 1000;
+            let nanosecs = ((timestamp_ms % 1000) * 1_000_000) as u32;
+
+            return DateTime::from_timestamp(timestamp_secs, nanosecs);
+        }
+        None
+    }
+
+    /// Inserts a filtered market into the custom table
+    async fn insert_filtered_market(
+        &self,
+        market: &MarketData,
+        symbol: &str,
+        table_name: &str,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<(), sqlx::Error> {
+        let last_update_utc = self.convert_update_time(&market.update_time);
+
+        let insert_sql = format!(
+            r#"
+            INSERT INTO {} (epic, instrumentName, instrumentType, expiry, lastUpdateUTC, symbol)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (epic) DO UPDATE SET
+                instrumentName = EXCLUDED.instrumentName,
+                instrumentType = EXCLUDED.instrumentType,
+                expiry = EXCLUDED.expiry,
+                lastUpdateUTC = EXCLUDED.lastUpdateUTC,
+                symbol = EXCLUDED.symbol
+            "#,
+            table_name
+        );
+
+        tx.execute(
+            sqlx::query(&insert_sql)
+                .bind(&market.epic)
+                .bind(&market.instrument_name)
+                .bind(format!("{:?}", market.instrument_type))
+                .bind(&market.expiry)
+                .bind(last_update_utc)
+                .bind(symbol),
+        )
+        .await?;
+
         Ok(())
     }
 
