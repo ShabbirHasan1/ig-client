@@ -249,6 +249,7 @@ impl IgAuthenticator for IgAuth<'_> {
         }
     }
 
+    // only valid for Bearer tokens
     async fn refresh(&self, sess: &IgSession) -> Result<IgSession, AuthError> {
         let url = self.rest_url("session/refresh-token");
 
@@ -362,8 +363,6 @@ impl IgAuthenticator for IgAuth<'_> {
         }
 
         let url = self.rest_url("session");
-
-        // Ensure the API key is trimmed and has no whitespace
         let api_key = self.cfg.credentials.api_key.trim();
 
         // Log the request details for debugging
@@ -419,14 +418,14 @@ impl IgAuthenticator for IgAuth<'_> {
                         let cst_str = value
                             .to_str()
                             .map_err(|_| AuthError::Unexpected(StatusCode::OK))?;
-                        debug!(
+                        info!(
                             "Successfully obtained new CST token of length: {}",
                             cst_str.len()
                         );
                         cst_str.to_owned()
                     }
                     None => {
-                        debug!("CST header not found in switch response, using existing token");
+                        info!("CST header not found in switch response, using existing token");
                         session.cst.clone()
                     }
                 };
@@ -485,15 +484,36 @@ impl IgAuthenticator for IgAuth<'_> {
         }
     }
 
-    async fn login_and_switch_account(
+    async fn relogin(&self, session: &IgSession) -> Result<IgSession, AuthError> {
+        // Check if tokens are expired or close to expiring (with 30 minute margin)
+        let margin = chrono::Duration::minutes(30);
+
+        let is_expired = {
+            let timer = session.token_timer.lock().unwrap();
+            timer.is_expired_w_margin(margin)
+        };
+
+        if is_expired {
+            info!("Tokens are expired or close to expiring, performing re-login");
+            self.login().await
+        } else {
+            debug!("Tokens are still valid, reusing existing session");
+            Ok(session.clone())
+        }
+    }
+
+    async fn relogin_and_switch_account(
         &self,
+        session: &IgSession,
         account_id: &str,
         default_account: Option<bool>,
     ) -> Result<IgSession, AuthError> {
-        let session = self.login().await?;
-        info!("Login successful");
+        let session = self.relogin(session).await?;
+        info!(
+            "Relogin check completed for account: {}, trying to switch to {}",
+            session.account_id, account_id
+        );
 
-        // Switch to the correct account if needed
         match self
             .switch_account(&session, account_id, default_account)
             .await
@@ -503,28 +523,19 @@ impl IgAuthenticator for IgAuth<'_> {
                 Ok(new_session)
             }
             Err(e) => {
-                warn!(
-                    "Could not switch to account {}: {:?}. Attempting to re-authenticate.",
-                    account_id, e
-                );
-
-                match self.login().await {
-                    Ok(new_session) => {
-                        info!(
-                            "Re-authentication successful. Using account: {}",
-                            new_session.account_id
-                        );
-                        Ok(new_session)
-                    }
-                    Err(login_err) => {
-                        error!(
-                            "Re-authentication failed: {:?}. Using original session.",
-                            login_err
-                        );
-                        Ok(session)
-                    }
-                }
+                warn!("Could not switch to account {}: {:?}.", account_id, e);
+                Err(e)
             }
         }
+    }
+
+    async fn login_and_switch_account(
+        &self,
+        account_id: &str,
+        default_account: Option<bool>,
+    ) -> Result<IgSession, AuthError> {
+        let session = self.login().await?;
+        self.relogin_and_switch_account(&session, account_id, default_account)
+            .await
     }
 }

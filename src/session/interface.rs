@@ -3,9 +3,75 @@ use crate::error::{AppError, AuthError};
 use crate::utils::rate_limiter::{
     RateLimitType, RateLimiter, RateLimiterStats, app_non_trading_limiter, create_rate_limiter,
 };
+use chrono::{DateTime, Utc};
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::debug;
+
+/// Timer for managing IG API token expiration and refresh cycles
+///
+/// According to IG API documentation, tokens are initially valid for 6 hours
+/// but get extended up to a maximum of 72 hours while they are in use.
+#[derive(Debug, Clone)]
+pub struct TokenTimer {
+    /// The current expiry time of the token (initially 6 hours from creation)
+    pub expiry: DateTime<Utc>,
+    /// The timestamp when the token was last refreshed
+    pub last_refreshed: DateTime<Utc>,
+    /// The maximum age the token can reach (72 hours from initial creation)
+    pub max_age: DateTime<Utc>,
+}
+
+impl Default for TokenTimer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TokenTimer {
+    /// Creates a new TokenTimer with initial 6-hour expiry and 72-hour maximum age
+    ///
+    /// # Returns
+    /// A new TokenTimer instance with expiry set to 6 hours from now and max_age set to 72 hours from now
+    pub fn new() -> Self {
+        let expiry = Utc::now() + chrono::Duration::hours(6);
+        let max_age = Utc::now() + chrono::Duration::hours(72);
+        Self {
+            expiry,
+            last_refreshed: Utc::now(),
+            max_age,
+        }
+    }
+
+    /// Checks if the token is expired based on current time
+    ///
+    /// # Returns
+    /// `true` if either the token expiry time or maximum age has been reached, `false` otherwise
+    pub fn is_expired(&self) -> bool {
+        self.expiry <= Utc::now() || self.max_age <= Utc::now()
+    }
+
+    /// Checks if the token is expired or will expire within the given margin
+    ///
+    /// # Arguments
+    /// * `margin` - The time margin to check before actual expiry
+    ///
+    /// # Returns
+    /// `true` if the token will expire within the margin or has already expired, `false` otherwise
+    pub fn is_expired_w_margin(&self, margin: chrono::Duration) -> bool {
+        self.expiry - margin <= Utc::now() || self.max_age - margin <= Utc::now()
+    }
+
+    /// Refreshes the token timer, extending the expiry time by 6 hours from now
+    ///
+    /// This should be called after each successful API request to extend token validity.
+    /// The expiry time is reset to 6 hours from the current time, but cannot exceed max_age.
+    pub fn refresh(&mut self) {
+        self.expiry = Utc::now() + chrono::Duration::hours(6);
+        self.last_refreshed = Utc::now();
+    }
+}
 
 /// Session information for IG Markets API authentication
 #[derive(Debug, Clone)]
@@ -28,6 +94,8 @@ pub struct IgSession {
     pub(crate) rate_limiter: Option<Arc<RateLimiter>>,
     /// Flag to indicate if the session is being used in a concurrent context
     pub(crate) concurrent_mode: Arc<AtomicBool>,
+    /// Timer for managing token expiration and automatic refresh cycles
+    pub token_timer: Arc<Mutex<TokenTimer>>,
 }
 
 impl IgSession {
@@ -49,6 +117,7 @@ impl IgSession {
                 Some(0.8),
             )),
             concurrent_mode: Arc::new(AtomicBool::new(false)),
+            token_timer: Arc::new(Mutex::new(TokenTimer::new())),
         }
     }
 
@@ -81,6 +150,7 @@ impl IgSession {
             api_key,
             rate_limiter: Some(rate_limiter),
             concurrent_mode: Arc::new(AtomicBool::new(false)),
+            token_timer: Arc::new(Mutex::new(TokenTimer::new())),
         }
     }
 
@@ -103,6 +173,7 @@ impl IgSession {
             api_key: String::new(),
             rate_limiter: Some(create_rate_limiter(limit_type, Some(0.8))),
             concurrent_mode: Arc::new(AtomicBool::new(false)),
+            token_timer: Arc::new(Mutex::new(TokenTimer::new())),
         }
     }
 
@@ -121,6 +192,7 @@ impl IgSession {
                 Some(config.rate_limit_safety_margin),
             )),
             concurrent_mode: Arc::new(AtomicBool::new(false)),
+            token_timer: Arc::new(Mutex::new(TokenTimer::new())),
         }
     }
 
@@ -159,6 +231,14 @@ impl IgSession {
         match &self.rate_limiter {
             Some(limiter) => Some(limiter.get_stats().await),
             None => None,
+        }
+    }
+
+    /// Refreshes the token timer to extend token validity
+    /// This should be called after each successful API request
+    pub fn refresh_token_timer(&self) {
+        if let Ok(mut timer) = self.token_timer.lock() {
+            timer.refresh();
         }
     }
 }
@@ -220,4 +300,35 @@ pub trait IgAuthenticator: Send + Sync {
         account_id: &str,
         default_account: Option<bool>,
     ) -> Result<IgSession, AuthError>;
+
+    /// Attempts to relogin (if needed) and switch to the specified account.
+    /// This method uses relogin() instead of login() to avoid unnecessary authentication
+    /// when tokens are still valid.
+    ///
+    /// # Arguments
+    /// * `session` - The current session to check for token validity
+    /// * `account_id` - The ID of the account to switch to
+    /// * `default_account` - Whether to set this account as the default (optional)
+    ///
+    /// # Returns
+    /// * `Ok(IgSession)` - On success, contains an updated session for the target account
+    /// * `Err(AuthError)` - If the operation fails
+    async fn relogin_and_switch_account(
+        &self,
+        session: &IgSession,
+        account_id: &str,
+        default_account: Option<bool>,
+    ) -> Result<IgSession, AuthError>;
+
+    /// Re-authenticates only if the current session tokens are expired or close to expiring.
+    /// This method checks the token expiration with a safety margin and only performs login
+    /// if necessary, making it more efficient than always calling login().
+    ///
+    /// # Arguments
+    /// * `session` - The current session to check for token validity
+    ///
+    /// # Returns
+    /// * `Ok(IgSession)` - Either the existing session (if tokens are still valid) or a new session (if re-login was needed)
+    /// * `Err(AuthError)` - If re-authentication fails
+    async fn relogin(&self, session: &IgSession) -> Result<IgSession, AuthError>;
 }
