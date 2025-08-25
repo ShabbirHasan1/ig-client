@@ -426,7 +426,7 @@ impl IgAuthenticator for IgAuth<'_> {
                     }
                     None => {
                         warn!("CST header not found in switch response, using existing token");
-                        session.cst.clone()
+                        return Err(AuthError::Unexpected(StatusCode::NO_CONTENT));
                     }
                 };
 
@@ -445,13 +445,13 @@ impl IgAuthenticator for IgAuth<'_> {
                         warn!(
                             "X-SECURITY-TOKEN header not found in switch response, using existing token"
                         );
-                        session.token.clone()
+                        return Err(AuthError::Unexpected(StatusCode::NO_CONTENT));
                     }
                 };
 
                 // Parse the response body
                 let switch_response: AccountSwitchResponse = resp.json().await?;
-                debug!("Account switch successful to: {}", account_id);
+                info!("Account switch successful to: {}", account_id);
                 trace!("Account switch response: {:?}", switch_response);
 
                 // Return a new session with the updated account ID and new tokens from the response headers

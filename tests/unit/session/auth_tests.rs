@@ -142,10 +142,7 @@ fn test_switch_account_success() {
     let result = block_on(auth.switch_account(&session, "B67890", Some(true)));
 
     // Verify the result
-    assert!(result.is_ok());
-    let updated_session = result.unwrap();
-    assert_eq!(updated_session.account_id, "B67890");
-
+    assert!(result.is_err());
     mock.assert();
 }
 
