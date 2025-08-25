@@ -418,14 +418,14 @@ impl IgAuthenticator for IgAuth<'_> {
                         let cst_str = value
                             .to_str()
                             .map_err(|_| AuthError::Unexpected(StatusCode::OK))?;
-                        info!(
+                        debug!(
                             "Successfully obtained new CST token of length: {}",
                             cst_str.len()
                         );
                         cst_str.to_owned()
                     }
                     None => {
-                        info!("CST header not found in switch response, using existing token");
+                        warn!("CST header not found in switch response, using existing token");
                         session.cst.clone()
                     }
                 };
@@ -442,7 +442,7 @@ impl IgAuthenticator for IgAuth<'_> {
                         token_str.to_owned()
                     }
                     None => {
-                        debug!(
+                        warn!(
                             "X-SECURITY-TOKEN header not found in switch response, using existing token"
                         );
                         session.token.clone()
@@ -451,7 +451,7 @@ impl IgAuthenticator for IgAuth<'_> {
 
                 // Parse the response body
                 let switch_response: AccountSwitchResponse = resp.json().await?;
-                debug!("Account switch successful");
+                debug!("Account switch successful to: {}", account_id);
                 trace!("Account switch response: {:?}", switch_response);
 
                 // Return a new session with the updated account ID and new tokens from the response headers
@@ -509,7 +509,7 @@ impl IgAuthenticator for IgAuth<'_> {
         default_account: Option<bool>,
     ) -> Result<IgSession, AuthError> {
         let session = self.relogin(session).await?;
-        info!(
+        debug!(
             "Relogin check completed for account: {}, trying to switch to {}",
             session.account_id, account_id
         );
@@ -518,10 +518,7 @@ impl IgAuthenticator for IgAuth<'_> {
             .switch_account(&session, account_id, default_account)
             .await
         {
-            Ok(new_session) => {
-                info!("✅ Switched to account: {}", new_session.account_id);
-                Ok(new_session)
-            }
+            Ok(new_session) => Ok(new_session),
             Err(e) => {
                 warn!("Could not switch to account {}: {:?}.", account_id, e);
                 Err(e)
