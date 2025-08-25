@@ -5,7 +5,7 @@ use ig_client::{
     session::interface::IgAuthenticator, transport::http_client::IgHttpClientImpl,
     utils::logger::setup_logger,
 };
-use std::{error::Error, fs, sync::Arc};
+use std::{error::Error, sync::Arc};
 use tracing::{debug, error, info};
 
 // Constants for API request handling

@@ -15,11 +15,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create configuration using the default Config implementation
     // This will read from environment variables as defined in src/config.rs
+    // Using NonTradingAccount rate limit for demo accounts
     let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::TradingAccount,
+        RateLimitType::NonTradingAccount,
         0.7,
     ));
-    info!("Configuration loaded");
+    info!("Configuration loaded → {}", config.rest_api.base_url);
 
     // Create HTTP client
     let http_client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
@@ -29,10 +30,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let authenticator = IgAuth::new(&config);
     info!("Authenticator created");
 
-    // Login to IG
+    // Login to IG and switch to the configured account if needed
     info!("Logging in to IG...");
-    let session = authenticator.login().await?;
-    info!("Session started successfully");
+    let session = if !config.credentials.account_id.trim().is_empty() {
+        info!(
+            "Using login_and_switch_account for account: {}",
+            config.credentials.account_id
+        );
+        authenticator
+            .login_and_switch_account(&config.credentials.account_id, Some(false))
+            .await?
+    } else {
+        info!("Using standard login");
+        authenticator.login().await?
+    };
+    info!(
+        "Session started successfully for account: {}",
+        session.account_id
+    );
 
     // Create account service
     let account_service = AccountServiceImpl::new(Arc::clone(&config), Arc::clone(&http_client));

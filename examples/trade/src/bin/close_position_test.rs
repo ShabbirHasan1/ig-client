@@ -204,7 +204,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &currency_code.clone(),
     );
 
-    let deal_id2a = match order_service.create_order(&session, &create_order2a).await {
+    let _deal_id2a = match order_service.create_order(&session, &create_order2a).await {
         Ok(response) => {
             let confirmation = order_service
                 .get_order_confirmation(&session, &response.deal_reference)
@@ -239,7 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &currency_code.clone(),
     );
 
-    let deal_id2b = match order_service.create_order(&session, &create_order2b).await {
+    let _deal_id2b = match order_service.create_order(&session, &create_order2b).await {
         Ok(response) => {
             let confirmation = order_service
                 .get_order_confirmation(&session, &response.deal_reference)
