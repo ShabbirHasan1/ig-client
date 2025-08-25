@@ -340,10 +340,15 @@ impl IgHttpClient for IgHttpClientImpl {
             // Process the response - rate limiting is handled inside process_response
             let result = self.process_response::<R>(response).await;
 
-            // If the request was successful, reset the rate limited flag
-            if result.is_ok() && RATE_LIMITED.load(Ordering::SeqCst) {
-                RATE_LIMITED.store(false, Ordering::SeqCst);
-                info!("Rate limit flag reset after successful request to {}", url);
+            // If the request was successful, refresh token timer and reset rate limited flag
+            if result.is_ok() {
+                // Refresh token timer to extend token validity
+                session.refresh_token_timer();
+
+                if RATE_LIMITED.load(Ordering::SeqCst) {
+                    RATE_LIMITED.store(false, Ordering::SeqCst);
+                    info!("Rate limit flag reset after successful request to {}", url);
+                }
             }
 
             // Release the permit (this happens automatically when permit goes out of scope,
@@ -382,6 +387,11 @@ impl IgHttpClient for IgHttpClientImpl {
 
         let response = builder.send().await?;
         let result = self.process_response::<R>(response).await;
+
+        // If the final attempt was successful, refresh token timer
+        if result.is_ok() {
+            session.refresh_token_timer();
+        }
 
         drop(permit);
         result
