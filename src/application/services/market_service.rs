@@ -1,4 +1,7 @@
+use crate::application::models::market::MarketNode;
 use crate::application::services::MarketService;
+use crate::application::services::types::DBEntry;
+use crate::presentation::build_market_hierarchy;
 use crate::{
     application::models::market::{
         HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketSearchResult,
@@ -10,8 +13,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use reqwest::Method;
+use std::error::Error;
 use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 /// Implementation of the market service
 pub struct MarketServiceImpl<T: IgHttpClient> {
@@ -173,6 +177,67 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
         debug!("{} child nodes found", result.nodes.len());
         debug!("{} markets found in node {}", result.markets.len(), node_id);
         Ok(result)
+    }
+
+    async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError> {
+        match self.get_market_navigation(&session).await {
+            Ok(response) => {
+                info!(
+                    "Test successful: {} nodes, {} markets at top level",
+                    response.nodes.len(),
+                    response.markets.len()
+                );
+
+                // If the test is successful, build the complete hierarchy
+                info!("Building market hierarchy...");
+                let hierarchy = match build_market_hierarchy(&self, &session, None, 0).await {
+                    Ok(h) => {
+                        info!(
+                            "Successfully built hierarchy with {} top-level nodes",
+                            h.len()
+                        );
+                        h
+                    }
+                    Err(e) => {
+                        error!("Error building complete hierarchy: {:?}", e);
+                        info!("Attempting to build a partial hierarchy with rate limiting...");
+                        // Try again with a smaller scope
+                        let limited_nodes = response
+                            .nodes
+                            .iter()
+                            .map(|n| MarketNode {
+                                id: n.id.clone(),
+                                name: n.name.clone(),
+                                children: Vec::new(),
+                                markets: Vec::new(),
+                            })
+                            .collect::<Vec<_>>();
+                        info!(
+                            "Created partial hierarchy with {} top-level nodes",
+                            limited_nodes.len()
+                        );
+                        limited_nodes
+                    }
+                };
+
+                let vec_db_entries: Vec<DBEntry> = hierarchy
+                    .iter()
+                    .map(|node| DBEntry::from(node))
+                    .filter(|entry| entry.epic.is_empty())
+                    .collect();
+                
+                // TODO: update the expiry date in each DBEntry
+                // all entries with the same symbol share the same expiry date
+                // we should get the proper expiry date from self.get_market_details
+                // MarketDetails.Instrument.expiry_details.last_dealing_date
+                // create a hash map with the symbol as key and the expiry date as value
+                Ok(vec_db_entries)
+            }
+            Err(e) => {
+                error!("Failed to get market navigation: {:?}", e);
+                Err(e)
+            }
+        }
     }
 }
 

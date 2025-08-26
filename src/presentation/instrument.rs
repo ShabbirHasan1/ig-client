@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Copy, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize, PartialEq, Eq, Hash, Default)]
 #[serde(rename_all = "UPPERCASE")]
 /// Types of financial instruments available in the IG Markets API
 pub enum InstrumentType {
@@ -66,5 +66,6 @@ pub enum InstrumentType {
     /// Unknown instrument type
     Unknown,
     /// Options
+    #[default]
     Options,
 }

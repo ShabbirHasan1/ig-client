@@ -1,9 +1,12 @@
-use crate::application::models::market::{
-    HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketSearchResult,
-};
+use std::error::Error;
+use std::matches;
+use crate::application::models::market::{HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketNode, MarketSearchResult};
 use crate::error::AppError;
 use crate::session::interface::IgSession;
 use async_trait::async_trait;
+use tracing::{error, info};
+use crate::application::services::types::DBEntry;
+use crate::presentation::build_market_hierarchy;
 
 /// Interface for the market service
 #[async_trait]
@@ -69,4 +72,5 @@ pub trait MarketService: Send + Sync {
         session: &IgSession,
         node_id: &str,
     ) -> Result<MarketNavigationResponse, AppError>;
+    async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError>;
 }

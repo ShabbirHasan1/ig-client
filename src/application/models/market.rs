@@ -34,19 +34,15 @@ pub struct Instrument {
     #[serde(rename = "valueOfOnePip")]
     /// Value of one pip for this instrument
     pub value_of_one_pip: String,
-
     /// Type of the instrument
     #[serde(rename = "instrumentType")]
     pub instrument_type: Option<InstrumentType>,
-
     /// Expiry details including last dealing date
     #[serde(rename = "expiryDetails")]
     pub expiry_details: Option<ExpiryDetails>,
-
     #[serde(rename = "slippageFactor")]
     /// Slippage factor for the instrument
     pub slippage_factor: Option<StepDistance>,
-
     #[serde(rename = "limitedRiskPremium")]
     /// Premium for limited risk trades
     pub limited_risk_premium: Option<StepDistance>,
