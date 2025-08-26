@@ -268,145 +268,90 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
     }
 
     async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError> {
-        match self.get_market_navigation(session).await {
-            Ok(response) => {
-                info!(
-                    "Navigation successful: {} nodes, {} markets at top level",
-                    response.nodes.len(),
-                    response.markets.len()
-                );
+        info!("Getting all markets from hierarchy for DB entries");
+        
+        // Use the get_all_markets method to collect all markets from the hierarchy
+        let all_markets = self.get_all_markets(session).await?;
+        
+        info!("Collected {} markets from hierarchy", all_markets.len());
 
-                // Collect all markets from top level and navigate through multiple levels
-                let mut all_markets = response.markets.clone();
+        // Convert all collected markets to DBEntry
+        let mut vec_db_entries: Vec<DBEntry> = all_markets
+            .iter()
+            .map(|market| DBEntry::from(market))
+            .filter(|entry| !entry.epic.is_empty()) // Filter entries that HAVE epics
+            .collect();
 
-                // Use iterative approach to navigate through multiple levels of nodes
-                let mut nodes_to_process = response.nodes.clone();
-                let mut processed_levels = 0;
-                let max_levels = 3; // Limit to 3 levels to avoid excessive API calls
+        info!("Created {} DB entries from markets", vec_db_entries.len());
 
-                while !nodes_to_process.is_empty() && processed_levels < max_levels {
-                    let mut next_level_nodes = Vec::new();
+        // Update the expiry date in each DBEntry
+        // All entries with the same symbol share the same expiry date
+        // Get the proper expiry date from self.get_market_details
+        // MarketDetails.instrument.expiry_details.last_dealing_date
 
-                    for node in &nodes_to_process {
-                        match self.get_market_navigation_node(session, &node.id).await {
-                            Ok(node_response) => {
-                                info!(
-                                    "Node '{}' (level {}) has {} markets and {} child nodes",
-                                    node.name,
-                                    processed_levels,
-                                    node_response.markets.len(),
-                                    node_response.nodes.len()
-                                );
+        // Create a hash map with the symbol as key and the expiry date as value
+        let mut symbol_expiry_map: HashMap<String, String> = HashMap::new();
 
-                                // Add markets from this node
-                                all_markets.extend(node_response.markets);
+        // Collect unique symbols to avoid duplicate API calls
+        let unique_symbols: HashSet<String> = vec_db_entries
+            .iter()
+            .map(|entry| entry.symbol.clone())
+            .filter(|symbol| !symbol.is_empty())
+            .collect();
 
-                                // Add child nodes for next level processing
-                                next_level_nodes.extend(node_response.nodes);
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Failed to get markets for node '{}' at level {}: {:?}",
-                                    node.name, processed_levels, e
-                                );
-                            }
-                        }
+        info!(
+            "Found {} unique symbols to fetch expiry dates for",
+            unique_symbols.len()
+        );
+
+        // Fetch expiry dates for each unique symbol
+        for symbol in unique_symbols {
+            // Find the first epic for this symbol to get market details
+            if let Some(entry) = vec_db_entries
+                .iter()
+                .find(|e| e.symbol == symbol && !e.epic.is_empty())
+            {
+                match self.get_market_details(session, &entry.epic).await {
+                    Ok(market_details) => {
+                        // Extract expiry date from market details
+                        let expiry_date = market_details
+                            .instrument
+                            .expiry_details
+                            .as_ref()
+                            .map(|details| details.last_dealing_date.clone())
+                            .unwrap_or_else(|| {
+                                // Fallback to the expiry field from the instrument if expiry_details is not available
+                                market_details.instrument.expiry.clone()
+                            });
+
+                        symbol_expiry_map.insert(symbol.clone(), expiry_date);
+                        info!(
+                            "Fetched expiry date for symbol {}: {}",
+                            symbol,
+                            symbol_expiry_map.get(&symbol).unwrap()
+                        );
                     }
-
-                    nodes_to_process = next_level_nodes;
-                    processed_levels += 1;
-                }
-
-                info!(
-                    "Total markets collected: {} (processed {} levels from {} initial nodes)",
-                    all_markets.len(),
-                    processed_levels,
-                    response.nodes.len()
-                );
-
-                // Convert all collected markets to DBEntry
-                let mut vec_db_entries: Vec<DBEntry> = all_markets
-                    .iter()
-                    .map(|market| DBEntry::from(market))
-                    .filter(|entry| !entry.epic.is_empty()) // Filter entries that HAVE epics
-                    .collect();
-
-                info!("Created {} DB entries from markets", vec_db_entries.len());
-
-                // Update the expiry date in each DBEntry
-                // All entries with the same symbol share the same expiry date
-                // Get the proper expiry date from self.get_market_details
-                // MarketDetails.instrument.expiry_details.last_dealing_date
-
-                // Create a hash map with the symbol as key and the expiry date as value
-                let mut symbol_expiry_map: HashMap<String, String> = HashMap::new();
-
-                // Collect unique symbols to avoid duplicate API calls
-                let unique_symbols: HashSet<String> = vec_db_entries
-                    .iter()
-                    .map(|entry| entry.symbol.clone())
-                    .filter(|symbol| !symbol.is_empty())
-                    .collect();
-
-                info!(
-                    "Found {} unique symbols to fetch expiry dates for",
-                    unique_symbols.len()
-                );
-
-                // Fetch expiry dates for each unique symbol
-                for symbol in unique_symbols {
-                    // Find the first epic for this symbol to get market details
-                    if let Some(entry) = vec_db_entries
-                        .iter()
-                        .find(|e| e.symbol == symbol && !e.epic.is_empty())
-                    {
-                        match self.get_market_details(session, &entry.epic).await {
-                            Ok(market_details) => {
-                                // Extract expiry date from market details
-                                let expiry_date = market_details
-                                    .instrument
-                                    .expiry_details
-                                    .as_ref()
-                                    .map(|details| details.last_dealing_date.clone())
-                                    .unwrap_or_else(|| {
-                                        // Fallback to the expiry field from the instrument if expiry_details is not available
-                                        market_details.instrument.expiry.clone()
-                                    });
-
-                                symbol_expiry_map.insert(symbol.clone(), expiry_date);
-                                info!(
-                                    "Fetched expiry date for symbol {}: {}",
-                                    symbol,
-                                    symbol_expiry_map.get(&symbol).unwrap()
-                                );
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Failed to get market details for epic {} (symbol {}): {:?}",
-                                    entry.epic, symbol, e
-                                );
-                                // Use the existing expiry from the entry as fallback
-                                symbol_expiry_map.insert(symbol.clone(), entry.expiry.clone());
-                            }
-                        }
+                    Err(e) => {
+                        error!(
+                            "Failed to get market details for epic {} (symbol {}): {:?}",
+                            entry.epic, symbol, e
+                        );
+                        // Use the existing expiry from the entry as fallback
+                        symbol_expiry_map.insert(symbol.clone(), entry.expiry.clone());
                     }
                 }
-
-                // Update vec_db_entries.expiry with the value from the hash map
-                for entry in &mut vec_db_entries {
-                    if let Some(expiry_date) = symbol_expiry_map.get(&entry.symbol) {
-                        entry.expiry = expiry_date.clone();
-                    }
-                }
-
-                info!("Updated expiry dates for {} entries", vec_db_entries.len());
-                Ok(vec_db_entries)
-            }
-            Err(e) => {
-                error!("Failed to get market navigation: {:?}", e);
-                Err(e)
             }
         }
+
+        // Update vec_db_entries.expiry with the value from the hash map
+        for entry in &mut vec_db_entries {
+            if let Some(expiry_date) = symbol_expiry_map.get(&entry.symbol) {
+                entry.expiry = expiry_date.clone();
+            }
+        }
+
+        info!("Updated expiry dates for {} entries", vec_db_entries.len());
+        Ok(vec_db_entries)
     }
 }
 
