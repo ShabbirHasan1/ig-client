@@ -270,7 +270,7 @@ impl IgHttpClient for IgHttpClientImpl {
 
                 // Calculate backoff duration
                 let backoff = self.calculate_backoff_duration(retry_count - 1);
-                info!(
+                debug!(
                     "Retry attempt {} for {} request to {}. Waiting for {:?} before retrying",
                     retry_count, method_str, url, backoff
                 );
@@ -428,7 +428,7 @@ impl IgHttpClient for IgHttpClientImpl {
 
                 // Calculate backoff duration
                 let backoff = self.calculate_backoff_duration(retry_count - 1);
-                info!(
+                debug!(
                     "Retry attempt {} for unauthenticated {} request to {}. Waiting for {:?} before retrying",
                     retry_count, method_str, url, backoff
                 );

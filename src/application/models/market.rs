@@ -359,7 +359,7 @@ pub struct MarketNavigationNode {
 }
 
 /// Structure representing a node in the market hierarchy
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketNode {
     /// Node ID
     pub id: String,

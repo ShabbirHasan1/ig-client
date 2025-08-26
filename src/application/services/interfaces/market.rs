@@ -1,12 +1,8 @@
-use std::error::Error;
-use std::matches;
-use crate::application::models::market::{HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketNode, MarketSearchResult};
+use crate::application::models::market::{HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketSearchResult};
 use crate::error::AppError;
 use crate::session::interface::IgSession;
 use async_trait::async_trait;
-use tracing::{error, info};
 use crate::application::services::types::DBEntry;
-use crate::presentation::build_market_hierarchy;
 
 /// Interface for the market service
 #[async_trait]
@@ -72,5 +68,23 @@ pub trait MarketService: Send + Sync {
         session: &IgSession,
         node_id: &str,
     ) -> Result<MarketNavigationResponse, AppError>;
+    
+    /// Navigates through all levels of the market hierarchy and collects all MarketData
+    ///
+    /// This method performs a comprehensive traversal of the IG Markets hierarchy,
+    /// starting from the root navigation and going through multiple levels to collect
+    /// all available market instruments.
+    ///
+    /// # Arguments
+    /// * `session` - The authenticated IG session
+    /// * `max_levels` - Maximum depth to traverse (default: 5 levels)
+    ///
+    /// # Returns
+    /// * `Result<Vec<MarketData>, AppError>` - Vector containing all found market instruments
+    async fn get_all_markets(
+        &self,
+        session: &IgSession,
+    ) -> Result<Vec<crate::application::models::market::MarketData>, AppError>;
+    
     async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError>;
 }
