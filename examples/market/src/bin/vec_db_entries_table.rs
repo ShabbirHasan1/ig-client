@@ -34,8 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create configuration using the default Config implementation
     let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::NonTradingAccount,
-        0.7,
+        RateLimitType::OnePerSecond,
+        0.5,
     ));
     
     // Create HTTP client
