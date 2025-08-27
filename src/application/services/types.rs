@@ -8,6 +8,20 @@ use serde::{Deserialize, Serialize};
 /// Result type for listener operations that don't return a value but may return an error
 pub type ListenerResult = Result<(), AppError>;
 
+/// A data structure representing an entry in the database, containing details about a financial trading instrument.
+///
+/// # Fields
+///
+/// * `symbol` - The unique identifier or trading symbol for this financial instrument.
+/// * `epic` - The Epic identifier as provided by the exchange for this instrument.
+/// * `name` - A human-readable name that describes the financial instrument.
+/// * `instrument_type` - The classification or type of the financial instrument (e.g., stock, bond, future, etc.).
+/// * `exchange` - The name of the exchange where this instrument is traded.
+/// * `expiry` - The expiration date and time of the instrument, if applicable.
+/// * `last_update` - The `DateTime` indicating when this record was last updated.
+///
+/// This structure includes traits such as `Debug`, `Clone`, `Serialize`, `Deserialize`, `PartialEq`, `Eq`, `Hash`, and `Default`
+/// for ease of use, serialization, comparison, and hashing operations.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct DBEntry {
     /// The trading symbol identifier

@@ -14,4 +14,4 @@ pub use interfaces::account::AccountService;
 pub use interfaces::market::MarketService;
 pub use interfaces::order::OrderService;
 pub use listener::Listener;
-pub use types::ListenerResult;
+pub use types::{DBEntry, ListenerResult};
