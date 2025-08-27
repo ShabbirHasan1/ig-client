@@ -285,7 +285,7 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
         // Convert all collected markets to DBEntry
         let mut vec_db_entries: Vec<DBEntry> = all_markets
             .iter()
-            .map(|market| DBEntry::from(market))
+            .map(DBEntry::from)
             .filter(|entry| !entry.epic.is_empty()) // Filter entries that HAVE epics
             .collect();
 

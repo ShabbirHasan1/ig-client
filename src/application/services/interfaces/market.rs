@@ -88,5 +88,15 @@ pub trait MarketService: Send + Sync {
         session: &IgSession,
     ) -> Result<Vec<crate::application::models::market::MarketData>, AppError>;
 
+    /// Gets all markets converted to database entries format
+    ///
+    /// This method retrieves all available markets and converts them to a standardized
+    /// database entry format for storage or further processing.
+    ///
+    /// # Arguments
+    /// * `session` - The authenticated IG session
+    ///
+    /// # Returns
+    /// * `Result<Vec<DBEntry>, AppError>` - Vector of database entries representing all markets
     async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError>;
 }

@@ -52,20 +52,20 @@ impl From<MarketNode> for DBEntry {
 
 impl From<MarketData> for DBEntry {
     fn from(market: MarketData) -> Self {
-        let mut entry = DBEntry::default();
-        entry.symbol = market
-            .epic
-            .split('.')
-            .nth(2)
-            .unwrap_or_default()
-            .to_string();
-        entry.epic = market.epic.clone();
-        entry.name = market.instrument_name.clone();
-        entry.instrument_type = market.instrument_type;
-        entry.exchange = "IG".to_string();
-        entry.expiry = market.expiry.clone();
-        entry.last_update = Utc::now();
-        entry
+        DBEntry {
+            symbol: market
+                .epic
+                .split('.')
+                .nth(2)
+                .unwrap_or_default()
+                .to_string(),
+            epic: market.epic.clone(),
+            name: market.instrument_name.clone(),
+            instrument_type: market.instrument_type,
+            exchange: "IG".to_string(),
+            expiry: market.expiry.clone(),
+            last_update: Utc::now(),
+        }
     }
 }
 
