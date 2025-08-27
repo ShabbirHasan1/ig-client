@@ -42,8 +42,6 @@ impl<T: IgHttpClient> MarketServiceImpl<T> {
     pub fn set_config(&mut self, config: Arc<Config>) {
         self.config = config;
     }
-    
-
 }
 
 #[async_trait]
@@ -66,8 +64,11 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
         session: &IgSession,
     ) -> Result<Vec<crate::application::models::market::MarketData>, AppError> {
         let max_depth = 6;
-        info!("Starting comprehensive market hierarchy traversal (max {} levels)", max_depth);
-        
+        info!(
+            "Starting comprehensive market hierarchy traversal (max {} levels)",
+            max_depth
+        );
+
         // Get the root navigation
         let root_response = self.get_market_navigation(session).await?;
         info!(
@@ -75,37 +76,41 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
             root_response.nodes.len(),
             root_response.markets.len()
         );
-        
+
         // Start with markets from the root level
         let mut all_markets = root_response.markets.clone();
-        
+
         // Use iterative approach to navigate through all levels
         let mut nodes_to_process = root_response.nodes.clone();
         let mut processed_levels = 0;
-        
+
         while !nodes_to_process.is_empty() && processed_levels < max_depth {
             let mut next_level_nodes = Vec::new();
             let mut level_market_count = 0;
-            
-            info!("Processing level {} with {} nodes", processed_levels, nodes_to_process.len());
-            
+
+            info!(
+                "Processing level {} with {} nodes",
+                processed_levels,
+                nodes_to_process.len()
+            );
+
             for node in &nodes_to_process {
                 match self.get_market_navigation_node(session, &node.id).await {
                     Ok(node_response) => {
                         let node_markets = node_response.markets.len();
                         let node_children = node_response.nodes.len();
-                        
+
                         if node_markets > 0 || node_children > 0 {
                             debug!(
                                 "Node '{}' (level {}): {} markets, {} child nodes",
                                 node.name, processed_levels, node_markets, node_children
                             );
                         }
-                        
+
                         // Add markets from this node
                         all_markets.extend(node_response.markets);
                         level_market_count += node_markets;
-                        
+
                         // Add child nodes for next level processing
                         next_level_nodes.extend(node_response.nodes);
                     }
@@ -117,22 +122,24 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
                     }
                 }
             }
-            
+
             info!(
                 "Level {} completed: {} markets found, {} nodes for next level",
-                processed_levels, level_market_count, next_level_nodes.len()
+                processed_levels,
+                level_market_count,
+                next_level_nodes.len()
             );
-            
+
             nodes_to_process = next_level_nodes;
             processed_levels += 1;
         }
-        
+
         info!(
             "Market hierarchy traversal completed: {} total markets found across {} levels",
             all_markets.len(),
             processed_levels
         );
-        
+
         Ok(all_markets)
     }
 
@@ -269,10 +276,10 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
 
     async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError> {
         info!("Getting all markets from hierarchy for DB entries");
-        
+
         // Use the get_all_markets method to collect all markets from the hierarchy
         let all_markets = self.get_all_markets(session).await?;
-        
+
         info!("Collected {} markets from hierarchy", all_markets.len());
 
         // Convert all collected markets to DBEntry

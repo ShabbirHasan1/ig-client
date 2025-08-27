@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RateLimitType::OnePerSecond,
         0.5,
     ));
-    
+
     // Create HTTP client
     let http_client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
     info!("HTTP client created");
@@ -52,12 +52,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Login to IG with detailed error handling
     info!("Attempting to login to IG...");
-    let session = authenticator.login_and_switch_account(
-        &config.credentials.account_id,
-        Some(false)
-    ).await?;
-    
-
+    let session = authenticator
+        .login_and_switch_account(&config.credentials.account_id, Some(false))
+        .await?;
 
     // Get vec DB entries
     info!("\n=== Fetching Vec DB Entries ===");
@@ -67,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 info!("📊 No DB entries found");
             } else {
                 info!("📊 Found {} DB entries", db_entries.len());
-                
+
                 // Convert DBEntry to DBEntryDisplay for table formatting
                 let display_entries: Vec<DBEntryDisplay> = db_entries
                     .iter()
@@ -93,17 +90,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         last_update: entry.last_update.format("%Y-%m-%d %H:%M:%S").to_string(),
                     })
                     .collect();
-                
+
                 // Create and display the table
                 let table = Table::new(display_entries)
                     .with(tabled::settings::Style::rounded())
-                    .with(tabled::settings::Modify::new(tabled::settings::object::Rows::first())
-                        .with(tabled::settings::Alignment::center()))
+                    .with(
+                        tabled::settings::Modify::new(tabled::settings::object::Rows::first())
+                            .with(tabled::settings::Alignment::center()),
+                    )
                     .to_string();
-                
+
                 println!("\n🎯 Market DB Entries Table:");
                 println!("{}", table);
-                
+
                 // Display summary statistics
                 info!("\n📈 Summary Statistics:");
                 let unique_symbols: std::collections::HashSet<String> = db_entries
@@ -113,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .collect();
                 info!("  Total entries: {}", db_entries.len());
                 info!("  Unique symbols: {}", unique_symbols.len());
-                
+
                 let instrument_types: std::collections::HashMap<String, usize> = db_entries
                     .iter()
                     .fold(std::collections::HashMap::new(), |mut acc, entry| {
@@ -121,12 +120,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         *acc.entry(type_str).or_insert(0) += 1;
                         acc
                     });
-                
+
                 info!("  Instrument types:");
                 for (instrument_type, count) in instrument_types {
                     info!("    {}: {}", instrument_type, count);
                 }
-                
+
                 let with_expiry = db_entries.iter().filter(|e| !e.expiry.is_empty()).count();
                 let without_expiry = db_entries.len() - with_expiry;
                 info!("  With expiry date: {}", with_expiry);

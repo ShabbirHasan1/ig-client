@@ -1,8 +1,10 @@
-use crate::application::models::market::{HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketSearchResult};
+use crate::application::models::market::{
+    HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketSearchResult,
+};
+use crate::application::services::types::DBEntry;
 use crate::error::AppError;
 use crate::session::interface::IgSession;
 use async_trait::async_trait;
-use crate::application::services::types::DBEntry;
 
 /// Interface for the market service
 #[async_trait]
@@ -68,7 +70,7 @@ pub trait MarketService: Send + Sync {
         session: &IgSession,
         node_id: &str,
     ) -> Result<MarketNavigationResponse, AppError>;
-    
+
     /// Navigates through all levels of the market hierarchy and collects all MarketData
     ///
     /// This method performs a comprehensive traversal of the IG Markets hierarchy,
@@ -85,6 +87,6 @@ pub trait MarketService: Send + Sync {
         &self,
         session: &IgSession,
     ) -> Result<Vec<crate::application::models::market::MarketData>, AppError>;
-    
+
     async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError>;
 }
