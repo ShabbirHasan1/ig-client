@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// Rate limiter type for different API endpoints with their respective limits
 ///
@@ -218,7 +218,7 @@ impl RateLimiter {
         let wait_time = self.time_until_next_request_ms().await;
 
         if wait_time > 0 {
-            info!(
+            debug!(
                 "Rate limiter ({:?}): waiting for {}ms ({}/{} requests used in window)",
                 self.limit_type,
                 wait_time,

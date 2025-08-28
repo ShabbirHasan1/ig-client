@@ -231,7 +231,7 @@ impl IgHttpClientImpl {
         tokio::spawn(async move {
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
             rate_limited.store(false, Ordering::SeqCst);
-            info!("Rate limit flag reset after 60 second cooldown");
+            debug!("Rate limit flag reset after 60 second cooldown");
         });
     }
 }
@@ -347,7 +347,7 @@ impl IgHttpClient for IgHttpClientImpl {
 
                 if RATE_LIMITED.load(Ordering::SeqCst) {
                     RATE_LIMITED.store(false, Ordering::SeqCst);
-                    info!("Rate limit flag reset after successful request to {}", url);
+                    debug!("Rate limit flag reset after successful request to {}", url);
                 }
             }
 
