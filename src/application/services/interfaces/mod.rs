@@ -1,3 +1,4 @@
 pub(crate) mod account;
-pub(crate) mod market;
+/// Module containing market service interface and related types
+pub mod market;
 pub(crate) mod order;

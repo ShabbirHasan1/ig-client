@@ -1,6 +1,7 @@
 /// Module containing account service for retrieving account information
 pub mod account_service;
-mod interfaces;
+/// Module containing service interfaces and traits
+pub mod interfaces;
 mod listener;
 /// Module containing market update listener implementation
 /// Module containing market service for retrieving market information
@@ -11,7 +12,7 @@ pub mod order_service;
 mod types;
 
 pub use interfaces::account::AccountService;
-pub use interfaces::market::MarketService;
+pub use interfaces::market::{MarketService, RecentPricesParams};
 pub use interfaces::order::OrderService;
 pub use listener::Listener;
 pub use types::{DBEntry, ListenerResult};

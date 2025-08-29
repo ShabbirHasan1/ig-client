@@ -6,3 +6,5 @@ pub mod market_database;
 pub mod market_persistence;
 /// Module containing utility functions for database operations
 pub mod utils;
+/// Module containing database service for historical prices persistence
+pub mod historical_prices;

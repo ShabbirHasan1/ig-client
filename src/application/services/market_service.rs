@@ -239,6 +239,133 @@ impl<T: IgHttpClient + 'static> MarketService for MarketServiceImpl<T> {
         Ok(result)
     }
 
+    async fn get_historical_prices_by_date_range(
+        &self,
+        session: &IgSession,
+        epic: &str,
+        resolution: &str,
+        start_date: &str,
+        end_date: &str,
+    ) -> Result<HistoricalPricesResponse, AppError> {
+        let path = format!("prices/{}/{}/{}/{}", epic, resolution, start_date, end_date);
+        info!(
+            "Getting historical prices for epic: {}, resolution: {}, from: {} to: {}",
+            epic, resolution, start_date, end_date
+        );
+
+        let result = self
+            .client
+            .request::<(), HistoricalPricesResponse>(Method::GET, &path, session, None, "2")
+            .await?;
+
+        debug!(
+            "Historical prices obtained for epic: {}, {} data points",
+            epic,
+            result.prices.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_recent_prices(
+        &self,
+        session: &IgSession,
+        params: &crate::application::services::interfaces::market::RecentPricesParams<'_>,
+    ) -> Result<HistoricalPricesResponse, AppError> {
+        let mut query_params = Vec::new();
+
+        if let Some(res) = params.resolution {
+            query_params.push(format!("resolution={}", res));
+        }
+        if let Some(f) = params.from {
+            query_params.push(format!("from={}", f));
+        }
+        if let Some(t) = params.to {
+            query_params.push(format!("to={}", t));
+        }
+        if let Some(max) = params.max_points {
+            query_params.push(format!("max={}", max));
+        }
+        if let Some(size) = params.page_size {
+            query_params.push(format!("pageSize={}", size));
+        }
+        if let Some(num) = params.page_number {
+            query_params.push(format!("pageNumber={}", num));
+        }
+
+        let query_string = if query_params.is_empty() {
+            String::new()
+        } else {
+            format!("?{}", query_params.join("&"))
+        };
+
+        let path = format!("prices/{}{}", params.epic, query_string);
+        info!("Getting recent prices for epic: {}", params.epic);
+
+        let result = self
+            .client
+            .request::<(), HistoricalPricesResponse>(Method::GET, &path, session, None, "3")
+            .await?;
+
+        debug!(
+            "Recent prices obtained for epic: {}, {} data points",
+            params.epic,
+            result.prices.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_historical_prices_by_count_v1(
+        &self,
+        session: &IgSession,
+        epic: &str,
+        resolution: &str,
+        num_points: i32,
+    ) -> Result<HistoricalPricesResponse, AppError> {
+        let path = format!("prices/{}/{}/{}", epic, resolution, num_points);
+        info!(
+            "Getting historical prices (v1) for epic: {}, resolution: {}, points: {}",
+            epic, resolution, num_points
+        );
+
+        let result = self
+            .client
+            .request::<(), HistoricalPricesResponse>(Method::GET, &path, session, None, "1")
+            .await?;
+
+        debug!(
+            "Historical prices (v1) obtained for epic: {}, {} data points",
+            epic,
+            result.prices.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_historical_prices_by_count_v2(
+        &self,
+        session: &IgSession,
+        epic: &str,
+        resolution: &str,
+        num_points: i32,
+    ) -> Result<HistoricalPricesResponse, AppError> {
+        let path = format!("prices/{}/{}/{}", epic, resolution, num_points);
+        info!(
+            "Getting historical prices (v2) for epic: {}, resolution: {}, points: {}",
+            epic, resolution, num_points
+        );
+
+        let result = self
+            .client
+            .request::<(), HistoricalPricesResponse>(Method::GET, &path, session, None, "2")
+            .await?;
+
+        debug!(
+            "Historical prices (v2) obtained for epic: {}, {} data points",
+            epic,
+            result.prices.len()
+        );
+        Ok(result)
+    }
+
     async fn get_market_navigation(
         &self,
         session: &IgSession,

@@ -6,6 +6,71 @@ use crate::error::AppError;
 use crate::session::interface::IgSession;
 use async_trait::async_trait;
 
+/// Parameters for getting recent prices (API v3)
+#[derive(Debug, Clone, Default)]
+pub struct RecentPricesParams<'a> {
+    /// Instrument epic
+    pub epic: &'a str,
+    /// Optional price resolution (default: MINUTE)
+    pub resolution: Option<&'a str>,
+    /// Optional start date time (yyyy-MM-dd'T'HH:mm:ss)
+    pub from: Option<&'a str>,
+    /// Optional end date time (yyyy-MM-dd'T'HH:mm:ss)
+    pub to: Option<&'a str>,
+    /// Optional max number of price points (default: 10)
+    pub max_points: Option<i32>,
+    /// Optional page size (default: 20, disable paging = 0)
+    pub page_size: Option<i32>,
+    /// Optional page number (default: 1)
+    pub page_number: Option<i32>,
+}
+
+impl<'a> RecentPricesParams<'a> {
+    /// Create new parameters with just the epic (required field)
+    pub fn new(epic: &'a str) -> Self {
+        Self {
+            epic,
+            ..Default::default()
+        }
+    }
+
+    /// Set the resolution
+    pub fn with_resolution(mut self, resolution: &'a str) -> Self {
+        self.resolution = Some(resolution);
+        self
+    }
+
+    /// Set the from date
+    pub fn with_from(mut self, from: &'a str) -> Self {
+        self.from = Some(from);
+        self
+    }
+
+    /// Set the to date
+    pub fn with_to(mut self, to: &'a str) -> Self {
+        self.to = Some(to);
+        self
+    }
+
+    /// Set the max points
+    pub fn with_max_points(mut self, max_points: i32) -> Self {
+        self.max_points = Some(max_points);
+        self
+    }
+
+    /// Set the page size
+    pub fn with_page_size(mut self, page_size: i32) -> Self {
+        self.page_size = Some(page_size);
+        self
+    }
+
+    /// Set the page number
+    pub fn with_page_number(mut self, page_number: i32) -> Self {
+        self.page_number = Some(page_number);
+        self
+    }
+}
+
 /// Interface for the market service
 #[async_trait]
 pub trait MarketService: Send + Sync {
@@ -48,6 +113,87 @@ pub trait MarketService: Send + Sync {
         resolution: &str,
         from: &str,
         to: &str,
+    ) -> Result<HistoricalPricesResponse, AppError>;
+
+    /// Gets historical prices for a market using path parameters (API v2)
+    ///
+    /// # Arguments
+    /// * `epic` - Instrument epic
+    /// * `resolution` - Price resolution (SECOND, MINUTE, MINUTE_2, MINUTE_3, MINUTE_5, MINUTE_10, MINUTE_15, MINUTE_30, HOUR, HOUR_2, HOUR_3, HOUR_4, DAY, WEEK, MONTH)
+    /// * `start_date` - Start date (yyyy-MM-dd HH:mm:ss)
+    /// * `end_date` - End date (yyyy-MM-dd HH:mm:ss). Must be later than the start date
+    async fn get_historical_prices_by_date_range(
+        &self,
+        session: &IgSession,
+        epic: &str,
+        resolution: &str,
+        start_date: &str,
+        end_date: &str,
+    ) -> Result<HistoricalPricesResponse, AppError>;
+
+    /// Gets recent historical prices for an instrument (API v3)
+    /// Returns minute prices within the last 10 minutes by default
+    ///
+    /// # Arguments
+    /// * `session` - The authenticated IG session
+    /// * `params` - Parameters for the recent prices request
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use ig_client::application::services::{MarketService, RecentPricesParams};
+    /// # use ig_client::application::services::market_service::MarketServiceImpl;
+    /// # use ig_client::transport::http_client::IgHttpClientImpl;
+    /// # use ig_client::config::Config;
+    /// # use std::sync::Arc;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let config = Arc::new(Config::default());
+    /// # let http_client = Arc::new(IgHttpClientImpl::new(config.clone()));
+    /// # let market_service = MarketServiceImpl::new(config, http_client);
+    /// # let session = ig_client::session::interface::IgSession::new(
+    /// #     "cst_token".to_string(),
+    /// #     "security_token".to_string(),
+    /// #     "account_id".to_string()
+    /// # );
+    ///
+    /// let params = RecentPricesParams::new("CS.D.EURUSD.TODAY.IP")
+    ///     .with_resolution("MINUTE_5")
+    ///     .with_max_points(10);
+    /// let prices = market_service.get_recent_prices(&session, &params).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn get_recent_prices(
+        &self,
+        session: &IgSession,
+        params: &RecentPricesParams<'_>,
+    ) -> Result<HistoricalPricesResponse, AppError>;
+
+    /// Gets historical prices by number of data points (API v1)
+    ///
+    /// # Arguments
+    /// * `epic` - Instrument epic
+    /// * `resolution` - Price resolution
+    /// * `num_points` - Number of data points required
+    async fn get_historical_prices_by_count_v1(
+        &self,
+        session: &IgSession,
+        epic: &str,
+        resolution: &str,
+        num_points: i32,
+    ) -> Result<HistoricalPricesResponse, AppError>;
+
+    /// Gets historical prices by number of data points (API v2)
+    ///
+    /// # Arguments
+    /// * `epic` - Instrument epic
+    /// * `resolution` - Price resolution
+    /// * `num_points` - Number of data points required
+    async fn get_historical_prices_by_count_v2(
+        &self,
+        session: &IgSession,
+        epic: &str,
+        resolution: &str,
+        num_points: i32,
     ) -> Result<HistoricalPricesResponse, AppError>;
 
     /// Gets the top-level market navigation nodes
