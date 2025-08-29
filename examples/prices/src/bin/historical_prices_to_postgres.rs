@@ -193,7 +193,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(e.into());
         }
     }
-    
 
     info!("\n=== Example completed successfully! ===");
 

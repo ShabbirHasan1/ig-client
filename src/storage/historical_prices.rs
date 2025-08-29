@@ -31,8 +31,8 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
         )
         "#,
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     // Create index for better query performance
     sqlx::query(
@@ -41,8 +41,8 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
         ON historical_prices(epic, snapshot_time DESC)
         "#,
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     // Create trigger for updating updated_at timestamp
     sqlx::query(
@@ -56,8 +56,8 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
         $$ language 'plpgsql'
         "#,
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     // Drop existing trigger if it exists
     sqlx::query(
@@ -65,9 +65,9 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
         DROP TRIGGER IF EXISTS update_historical_prices_updated_at ON historical_prices
         "#,
     )
-        .execute(pool)
-        .await?;
-    
+    .execute(pool)
+    .await?;
+
     // Create the trigger
     sqlx::query(
         r#"
@@ -77,8 +77,8 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
             EXECUTE FUNCTION update_updated_at_column()
         "#,
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     info!("✅ Historical prices table initialized successfully");
     Ok(())
@@ -87,9 +87,13 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
 /// Storage statistics for tracking insert/update operations
 #[derive(Debug, Default)]
 pub struct StorageStats {
+    /// Number of new records inserted into the database
     pub inserted: usize,
+    /// Number of existing records updated in the database
     pub updated: usize,
+    /// Number of records skipped due to errors or validation issues
     pub skipped: usize,
+    /// Total number of records processed (inserted + updated + skipped)
     pub total_processed: usize,
 }
 
@@ -102,7 +106,11 @@ pub async fn store_historical_prices(
     let mut stats = StorageStats::default();
     let mut tx = pool.begin().await?;
 
-    info!("Processing {} price records for epic: {}", prices.len(), epic);
+    info!(
+        "Processing {} price records for epic: {}",
+        prices.len(),
+        epic
+    );
 
     for (i, price) in prices.iter().enumerate() {
         stats.total_processed += 1;
@@ -111,7 +119,12 @@ pub async fn store_historical_prices(
         let snapshot_time = match parse_snapshot_time(&price.snapshot_time) {
             Ok(time) => time,
             Err(e) => {
-                warn!("⚠️  Skipping record {}: Invalid timestamp '{}': {}", i + 1, price.snapshot_time, e);
+                warn!(
+                    "⚠️  Skipping record {}: Invalid timestamp '{}': {}",
+                    i + 1,
+                    price.snapshot_time,
+                    e
+                );
                 stats.skipped += 1;
                 continue;
             }
@@ -146,23 +159,23 @@ pub async fn store_historical_prices(
                 updated_at = NOW()
             "#,
         )
-            .bind(epic)
-            .bind(snapshot_time)
-            .bind(price.open_price.bid)
-            .bind(price.open_price.ask)
-            .bind(price.open_price.last_traded)
-            .bind(price.high_price.bid)
-            .bind(price.high_price.ask)
-            .bind(price.high_price.last_traded)
-            .bind(price.low_price.bid)
-            .bind(price.low_price.ask)
-            .bind(price.low_price.last_traded)
-            .bind(price.close_price.bid)
-            .bind(price.close_price.ask)
-            .bind(price.close_price.last_traded)
-            .bind(price.last_traded_volume)
-            .execute(&mut *tx)
-            .await?;
+        .bind(epic)
+        .bind(snapshot_time)
+        .bind(price.open_price.bid)
+        .bind(price.open_price.ask)
+        .bind(price.open_price.last_traded)
+        .bind(price.high_price.bid)
+        .bind(price.high_price.ask)
+        .bind(price.high_price.last_traded)
+        .bind(price.low_price.bid)
+        .bind(price.low_price.ask)
+        .bind(price.low_price.last_traded)
+        .bind(price.close_price.bid)
+        .bind(price.close_price.ask)
+        .bind(price.close_price.last_traded)
+        .bind(price.last_traded_volume)
+        .execute(&mut *tx)
+        .await?;
 
         // Check if it was an insert or update
         if result.rows_affected() > 0 {
@@ -196,7 +209,7 @@ pub async fn store_historical_prices(
     Ok(stats)
 }
 
-/// Parse snapshot time from IG format to DateTime<Utc>
+/// Parse snapshot time from IG format to `DateTime<Utc>`
 fn parse_snapshot_time(snapshot_time: &str) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
     // IG format: "yyyy/MM/dd hh:mm:ss" or "yyyy-MM-dd hh:mm:ss"
     let formats = [
@@ -218,11 +231,17 @@ fn parse_snapshot_time(snapshot_time: &str) -> Result<DateTime<Utc>, Box<dyn std
 /// Database statistics for a specific epic
 #[derive(Debug)]
 pub struct TableStats {
+    /// Total number of records in the database for this epic
     pub total_records: i64,
+    /// Earliest date in the dataset (formatted as string)
     pub earliest_date: String,
+    /// Latest date in the dataset (formatted as string)
     pub latest_date: String,
+    /// Average closing price across all records
     pub avg_close_price: f64,
+    /// Minimum price (lowest of all low prices) in the dataset
     pub min_price: f64,
+    /// Maximum price (highest of all high prices) in the dataset
     pub max_price: f64,
 }
 
@@ -241,9 +260,9 @@ pub async fn get_table_statistics(pool: &PgPool, epic: &str) -> Result<TableStat
         WHERE epic = $1
         "#,
     )
-        .bind(epic)
-        .fetch_one(pool)
-        .await?;
+    .bind(epic)
+    .fetch_one(pool)
+    .await?;
 
     Ok(TableStats {
         total_records: row.get("total_records"),
