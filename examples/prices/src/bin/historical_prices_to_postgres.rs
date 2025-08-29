@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use ig_client::application::services::MarketService;
 use ig_client::storage::historical_prices::{
     get_table_statistics, initialize_historical_prices_table, store_historical_prices,
@@ -84,30 +84,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     info!("✅ Using epic: {}", epic);
-
-    // Validate that the epic exists by searching for it
-    info!("Validating epic exists in IG Markets...");
-    match market_service.search_markets(&session, &epic).await {
-        Ok(search_results) => {
-            if let Some(market) = search_results.markets.iter().find(|m| m.epic == epic) {
-                info!(
-                    "✅ Epic validated: {} ({})",
-                    market.instrument_name, market.epic
-                );
-            } else {
-                warn!(
-                    "⚠️  Epic {} not found in search results, but proceeding anyway",
-                    epic
-                );
-            }
-        }
-        Err(e) => {
-            warn!(
-                "⚠️  Could not validate epic {}: {:?}, but proceeding anyway",
-                epic, e
-            );
-        }
-    }
 
     // Calculate date range for the last year
     let end_date = Utc::now();
@@ -217,23 +193,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(e.into());
         }
     }
-
-    info!("\n=== Summary ===");
-    info!("📋 Historical Prices to PostgreSQL Example Features:");
-    info!("  • Endpoint: /prices/{{epic}}/{{resolution}}/{{startDate}}/{{endDate}} (API v2)");
-    info!("  • Resolution: HOUR (hourly data)");
-    info!("  • Time range: Last 365 days");
-    info!("  • Database: PostgreSQL with automatic table creation");
-    info!("  • UPSERT operations: Insert new records, update existing ones");
-    info!("  • Statistics: Comprehensive data analysis and reporting");
-    info!("  • Error handling: Robust error management and logging");
+    
 
     info!("\n=== Example completed successfully! ===");
-    info!(
-        "💡 The historical_prices table now contains hourly price data for {}",
-        epic
-    );
-    info!("🔄 Run this example again to update the data with latest prices");
 
     Ok(())
 }

@@ -59,9 +59,18 @@ pub async fn initialize_historical_prices_table(pool: &PgPool) -> Result<(), sql
         .execute(pool)
         .await?;
 
+    // Drop existing trigger if it exists
     sqlx::query(
         r#"
-        DROP TRIGGER IF EXISTS update_historical_prices_updated_at ON historical_prices;
+        DROP TRIGGER IF EXISTS update_historical_prices_updated_at ON historical_prices
+        "#,
+    )
+        .execute(pool)
+        .await?;
+    
+    // Create the trigger
+    sqlx::query(
+        r#"
         CREATE TRIGGER update_historical_prices_updated_at
             BEFORE UPDATE ON historical_prices
             FOR EACH ROW

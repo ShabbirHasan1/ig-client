@@ -426,7 +426,8 @@ impl IgAuthenticator for IgAuth<'_> {
                     }
                     None => {
                         warn!("CST header not found in switch response, using existing token");
-                        return Err(AuthError::Unexpected(StatusCode::NO_CONTENT));
+                        // return Err(AuthError::Unexpected(StatusCode::NO_CONTENT));
+                        session.cst.clone()
                     }
                 };
 
