@@ -8,7 +8,7 @@ use ig_client::utils::logger::setup_logger;
 use ig_client::utils::rate_limiter::RateLimitType;
 use std::error::Error;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -60,7 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         match market_service.get_market_details(&session, epic).await {
             Ok(details) => {
-                info!("✅ Successfully fetched details for {}", epic);
+                debug!("✅ Successfully fetched details for {}", epic);
                 markets_got.push(details);
             }
             Err(e) => {

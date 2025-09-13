@@ -120,7 +120,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 // Match each result with its corresponding EPIC
                 for (i, details) in details_vec.iter().enumerate() {
                     let epic = &epics_chunk[i];
-                    info!("✅ Successfully fetched details for {}", epic);
+                    debug!("✅ Successfully fetched details for {}", epic);
                     market_details_vec.push((epic.clone(), details.clone()));
                 }
 
@@ -143,7 +143,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                     match market_service.get_market_details(&session, epic).await {
                         Ok(details) => {
-                            info!("✅ Successfully fetched details for {}", epic);
+                            debug!("✅ Successfully fetched details for {}", epic);
                             market_details_vec.push((epic.clone(), details));
                             processed_count += 1;
                         }

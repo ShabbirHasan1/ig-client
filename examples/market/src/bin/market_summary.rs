@@ -156,10 +156,10 @@ async fn get_market_summaries() -> Result<Vec<MarketSummary>, Box<dyn Error>> {
                 // Match each result with its corresponding EPIC
                 for (i, details) in details_vec.iter().enumerate() {
                     let epic = &epics_chunk[i];
-                    info!("✅ Successfully fetched details for {}", epic);
+                    debug!("✅ Successfully fetched details for {}", epic);
                     let (mid, spread) =
                         if details.snapshot.bid.is_none() || details.snapshot.offer.is_none() {
-                            info!("❌ Missing bid or offer for {}", epic);
+                            warn!("❌ Missing bid or offer for {}", epic);
                             (None, None)
                         } else {
                             let mid = details.snapshot.offer.unwrap()
@@ -204,11 +204,11 @@ async fn get_market_summaries() -> Result<Vec<MarketSummary>, Box<dyn Error>> {
 
                     match market_service.get_market_details(&session, epic).await {
                         Ok(details) => {
-                            info!("✅ Successfully fetched details for {}", epic);
+                            debug!("✅ Successfully fetched details for {}", epic);
                             let (mid, spread) = if details.snapshot.bid.is_none()
                                 || details.snapshot.offer.is_none()
                             {
-                                info!("❌ Missing bid or offer for {}", epic);
+                                warn!("❌ Missing bid or offer for {}", epic);
                                 (None, None)
                             } else {
                                 let mid = details.snapshot.offer.unwrap()
