@@ -39,7 +39,7 @@ lint:
 
 .PHONY: lint-fix
 lint-fix: 
-	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
+	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged --workspace -- -D warnings
 
 # Clean the project
 .PHONY: clean
