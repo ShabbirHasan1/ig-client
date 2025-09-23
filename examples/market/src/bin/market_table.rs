@@ -119,7 +119,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let filename = "Data/market_table.json";
-    if let Err(e) = std::fs::write(&filename, &json) {
+    if let Err(e) = std::fs::write(filename, &json) {
         error!("Failed to write to file {}: {:?}", filename, e);
         return Err(Box::new(e) as Box<dyn Error>);
     }

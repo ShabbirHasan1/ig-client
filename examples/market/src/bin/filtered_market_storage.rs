@@ -4,7 +4,6 @@ use ig_client::storage::utils::{create_connection_pool, create_database_config_f
 use ig_client::utils::logger::setup_logger;
 use std::collections::HashMap;
 use std::{error::Error, fs};
-use tokio;
 use tracing::info;
 
 #[tokio::main]

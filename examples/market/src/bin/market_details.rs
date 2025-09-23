@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         info!(
             "Fetching market details for batch {}/{} (EPICs {}-{} of {})",
             (chunk_start / BATCH_SIZE) + 1,
-            (total_epics + BATCH_SIZE - 1) / BATCH_SIZE,
+            total_epics.div_ceil(BATCH_SIZE),
             chunk_start + 1,
             chunk_end,
             total_epics
@@ -255,7 +255,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Save the results to a file
-    let filename = format!("Data/market_details.json");
+    let filename = "Data/market_details.json".to_string();
     std::fs::write(&filename, &json).map_err(|e| Box::new(e) as Box<dyn Error>)?;
     info!("Results saved to '{}'", filename);
     info!(

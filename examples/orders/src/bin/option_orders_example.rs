@@ -1,9 +1,8 @@
 use ig_client::application::models::order::{
     ClosePositionRequest, CreateOrderRequest, Direction, Status,
 };
-use ig_client::application::services::market_service::MarketServiceImpl;
+use ig_client::application::services::OrderService;
 use ig_client::application::services::order_service::OrderServiceImpl;
-use ig_client::application::services::{MarketService, OrderService};
 use ig_client::utils::rate_limiter::RateLimitType;
 use ig_client::{
     config::Config, session::auth::IgAuth, session::interface::IgAuthenticator,
@@ -20,10 +19,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Arc::new(Config::with_rate_limit_type(
         RateLimitType::TradingAccount,
         0.01,
-    ));
-    let config_no_trade = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::OnePerSecond,
-        0.5,
     ));
 
     info!("Configuration loaded");

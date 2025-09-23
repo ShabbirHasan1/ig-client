@@ -10,7 +10,7 @@ use lightstreamer_rs::subscription::{Snapshot, Subscription, SubscriptionMode};
 use lightstreamer_rs::utils::setup_signal_hook;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
-use tracing::{Level, error, info, warn};
+use tracing::{error, info, warn};
 
 const MAX_CONNECTION_ATTEMPTS: u64 = 3;
 
@@ -124,7 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut retry_counter: u64 = 0;
     while retry_counter < MAX_CONNECTION_ATTEMPTS {
         let mut client = client.lock().await;
-        match client.connect(Arc::clone(&shutdown_signal)).await {
+        match client.connect_direct(Arc::clone(&shutdown_signal)).await {
             Ok(_) => {
                 client.disconnect().await;
                 break;

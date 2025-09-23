@@ -1,7 +1,6 @@
 use ig_client::application::services::MarketService;
 use ig_client::application::services::market_service::MarketServiceImpl;
 use ig_client::config::Config;
-use ig_client::presentation::{build_market_hierarchy, extract_markets_from_hierarchy};
 use ig_client::session::auth::IgAuth;
 use ig_client::session::interface::IgAuthenticator;
 use ig_client::transport::http_client::IgHttpClientImpl;
@@ -11,9 +10,6 @@ use std::error::Error;
 use std::fs;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
-
-// Constants for API request handling
-const BATCH_SIZE: usize = 10; // Number of EPICs to process before saving results
 
 /// Structure to hold market summary information
 #[derive(Debug, Clone)]
@@ -139,7 +135,7 @@ async fn get_market_summaries() -> Result<Vec<MarketSummary>, Box<dyn Error>> {
     // Process EPICs one at a time to be extremely conservative with API usage
     for (index, epic) in epics.iter().enumerate() {
         // Process one EPIC at a time
-        let epics_chunk = &[epic.clone()];
+        let epics_chunk = std::slice::from_ref(epic);
 
         info!(
             "Fetching market details for EPIC {}/{}: {}",

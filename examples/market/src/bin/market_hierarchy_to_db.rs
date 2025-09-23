@@ -11,7 +11,6 @@ use ig_client::{
     session::interface::IgAuthenticator, transport::http_client::IgHttpClientImpl,
 };
 use std::{error::Error, sync::Arc};
-use tokio;
 use tracing::{error, info, warn};
 
 #[tokio::main]
