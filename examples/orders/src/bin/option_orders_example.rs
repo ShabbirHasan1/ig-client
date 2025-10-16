@@ -31,10 +31,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let authenticator = IgAuth::new(&config);
     info!("Authenticator created");
 
-    // Login to IG
+    // Login to IG and switch to the configured account if needed
     info!("Logging in to IG...");
-    let session = authenticator.login().await?;
-    info!("Session started successfully");
+    let session = if !config.credentials.account_id.trim().is_empty() {
+        info!(
+            "Using login_and_switch_account for account: {}",
+            config.credentials.account_id
+        );
+        authenticator
+            .login_and_switch_account(&config.credentials.account_id, Some(false))
+            .await?
+    } else {
+        info!("Using standard login");
+        authenticator.login().await?
+    };
+    info!(
+        "Session started successfully for account: {}",
+        session.account_id
+    );
 
     let epic = "DO.D.OTCDDAX.68.IP"; // Example epic for testing
     let expiry = Some(
@@ -48,11 +62,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let deal_reference = Some(nanoid!(30, &nanoid::alphabet::SAFE));
     info!("{:?}", deal_reference);
     let create_order = CreateOrderRequest::buy_option_to_market(
-        &epic.to_string(),
-        &size,
-        &expiry.clone(),
-        &deal_reference,
-        &currency_code.clone(),
+        epic.to_string(),
+        size,
+        expiry.clone(),
+        deal_reference,
+        currency_code.clone(),
     );
 
     // Create a market service

@@ -61,11 +61,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Creating order with deal reference: {:?}", deal_reference1);
 
     let create_order1 = CreateOrderRequest::buy_option_to_market(
-        &epic.to_string(),
-        &size,
-        &expiry.clone(),
-        &deal_reference1,
-        &currency_code.clone(),
+        epic.to_string(),
+        size,
+        expiry.clone(),
+        deal_reference1,
+        currency_code.clone(),
     );
 
     let deal_id1 = match order_service.create_order(&session, &create_order1).await {
@@ -197,11 +197,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let create_order2a = CreateOrderRequest::buy_option_to_market(
-        &epic.to_string(),
-        &size2a,
-        &expiry.clone(),
-        &deal_reference2a,
-        &currency_code.clone(),
+        epic.to_string(),
+        size2a,
+        expiry.clone(),
+        deal_reference2a,
+        currency_code.clone(),
     );
 
     let _deal_id2a = match order_service.create_order(&session, &create_order2a).await {
@@ -232,11 +232,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let create_order2b = CreateOrderRequest::buy_option_to_market(
-        &epic.to_string(),
-        &size2b,
-        &expiry.clone(),
-        &deal_reference2b,
-        &currency_code.clone(),
+        epic.to_string(),
+        size2b,
+        expiry.clone(),
+        deal_reference2b,
+        currency_code.clone(),
     );
 
     let _deal_id2b = match order_service.create_order(&session, &create_order2b).await {

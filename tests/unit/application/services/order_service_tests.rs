@@ -48,8 +48,12 @@ impl IgHttpClient for MockHttpClient {
 #[test]
 fn test_create_order_request_market() {
     // Test the market constructor of CreateOrderRequest
-    let order =
-        CreateOrderRequest::market("OP.D.OTCDAX1.021100P.IP".to_string(), Direction::Buy, 1.0);
+    let order = CreateOrderRequest::market(
+        "OP.D.OTCDAX1.021100P.IP".to_string(),
+        Direction::Buy,
+        1.0,
+        None,
+    );
 
     // Verify that the fields were set correctly
     assert_eq!(order.epic, "OP.D.OTCDAX1.021100P.IP");
@@ -67,6 +71,7 @@ fn test_create_order_request_limit() {
         Direction::Sell,
         1.0,
         1.2345,
+        None,
     );
 
     // Verify that the fields were set correctly
@@ -84,9 +89,13 @@ fn test_create_order_request_limit() {
 #[test]
 fn test_create_order_request_with_reference() {
     // Test the with_reference method
-    let order =
-        CreateOrderRequest::market("OP.D.OTCDAX1.021100P.IP".to_string(), Direction::Buy, 1.0)
-            .with_reference("TEST_REF".to_string());
+    let order = CreateOrderRequest::market(
+        "OP.D.OTCDAX1.021100P.IP".to_string(),
+        Direction::Buy,
+        1.0,
+        None,
+    )
+    .with_reference("TEST_REF".to_string());
 
     // Verify deal_reference field is set correctly
     assert_eq!(order.deal_reference, Some("TEST_REF".to_string()));
@@ -95,9 +104,13 @@ fn test_create_order_request_with_reference() {
 #[test]
 fn test_create_order_request_with_stop_loss() {
     // Test the with_stop_loss method
-    let order =
-        CreateOrderRequest::market("OP.D.OTCDAX1.021100P.IP".to_string(), Direction::Buy, 1.0)
-            .with_stop_loss(1.2000);
+    let order = CreateOrderRequest::market(
+        "OP.D.OTCDAX1.021100P.IP".to_string(),
+        Direction::Buy,
+        1.0,
+        None,
+    )
+    .with_stop_loss(1.2000);
 
     // Verify stop_level field is set correctly
     assert_eq!(order.stop_level, Some(1.2000));
@@ -106,9 +119,13 @@ fn test_create_order_request_with_stop_loss() {
 #[test]
 fn test_create_order_request_with_take_profit() {
     // Test the with_take_profit method
-    let order =
-        CreateOrderRequest::market("OP.D.OTCDAX1.021100P.IP".to_string(), Direction::Buy, 1.0)
-            .with_take_profit(1.3000);
+    let order = CreateOrderRequest::market(
+        "OP.D.OTCDAX1.021100P.IP".to_string(),
+        Direction::Buy,
+        1.0,
+        None,
+    )
+    .with_take_profit(1.3000);
 
     // Verify limit_level field is set correctly
     assert_eq!(order.limit_level, Some(1.3000));
