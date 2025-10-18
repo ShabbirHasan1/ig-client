@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         session.account_id
     );
 
-    let epic = "DO.D.OTCDDAX.68.IP"; // Example epic for testing
+    let epic = "CS.D.EURUSD.CEEM.IP"; // Example epic for testing
     let expiry = Some(
         chrono::Local::now()
             .format("%d-%b-%y")
@@ -58,16 +58,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .to_uppercase(),
     );
     let size = 1.25; // Size of the order
-    let currency_code = Some("EUR".to_string()); // Example currency code
+    let currency_code = Some("USD".to_string()); // Example currency code
     let deal_reference = Some(nanoid!(30, &nanoid::alphabet::SAFE));
     info!("{:?}", deal_reference);
-    let create_order = CreateOrderRequest::buy_option_to_market(
-        epic.to_string(),
-        size,
-        expiry.clone(),
-        deal_reference,
-        currency_code.clone(),
-    );
+    let create_order =
+        CreateOrderRequest::market(epic.to_string(), Direction::Buy, size, currency_code);
 
     // Create a market service
     // let market_service = MarketServiceImpl::new(config_no_trade, client.clone());

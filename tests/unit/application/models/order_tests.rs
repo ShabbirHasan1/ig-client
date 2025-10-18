@@ -11,7 +11,7 @@ fn test_create_order_request_market() {
     let direction = Direction::Buy;
     let size = 1.0;
 
-    let order = CreateOrderRequest::market(epic.to_string(), direction.clone(), size);
+    let order = CreateOrderRequest::market(epic.to_string(), direction.clone(), size, None);
 
     assert_eq!(order.epic, epic);
     assert_eq!(order.direction, direction);
@@ -19,15 +19,15 @@ fn test_create_order_request_market() {
     assert_eq!(order.order_type, OrderType::Market);
     assert_eq!(order.time_in_force, TimeInForce::FillOrKill);
     assert!(order.level.is_none());
-    assert!(order.guaranteed_stop.is_none());
+    assert!(!order.guaranteed_stop);
     assert!(order.stop_level.is_none());
     assert!(order.stop_distance.is_none());
     assert!(order.limit_level.is_none());
     assert!(order.limit_distance.is_none());
     // quote_id field no longer exists in CreateOrderRequest
-    assert!(order.currency_code.is_none());
-    assert_eq!(order.force_open, Some(true)); // Updated: force_open is now Some(true) by default
-    assert!(order.expiry.is_none());
+    assert_eq!(order.currency_code, "EUR".to_string());
+    assert!(order.force_open); // Updated: force_open is now Some(true) by default
+    assert_eq!(order.expiry, Some("-".to_string()));
     assert!(order.deal_reference.is_none());
 }
 
@@ -38,7 +38,7 @@ fn test_create_order_request_limit() {
     let size = 2.0;
     let level = 1.2345;
 
-    let order = CreateOrderRequest::limit(epic.to_string(), direction.clone(), size, level);
+    let order = CreateOrderRequest::limit(epic.to_string(), direction.clone(), size, level, None);
 
     assert_eq!(order.epic, epic);
     assert_eq!(order.direction, direction);
@@ -46,14 +46,14 @@ fn test_create_order_request_limit() {
     assert_eq!(order.order_type, OrderType::Limit);
     assert_eq!(order.time_in_force, TimeInForce::GoodTillCancelled);
     assert_eq!(order.level, Some(level));
-    assert!(order.guaranteed_stop.is_none());
+    assert!(!order.guaranteed_stop);
     assert!(order.stop_level.is_none());
     assert!(order.stop_distance.is_none());
     assert!(order.limit_level.is_none());
     assert!(order.limit_distance.is_none());
     // quote_id field no longer exists in CreateOrderRequest
-    assert!(order.currency_code.is_none());
-    assert_eq!(order.force_open, Some(true)); // Updated: force_open is now Some(true) by default
+    assert_eq!(order.currency_code, "EUR".to_string());
+    assert!(order.force_open); // Updated: force_open is now Some(true) by default
     assert!(order.expiry.is_none());
     assert!(order.deal_reference.is_none());
 }
@@ -65,8 +65,8 @@ fn test_create_order_request_with_stop_loss() {
     let size = 1.0;
     let stop_level = 1.2000;
 
-    let order =
-        CreateOrderRequest::market(epic.to_string(), direction, size).with_stop_loss(stop_level);
+    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None)
+        .with_stop_loss(stop_level);
 
     assert_eq!(order.stop_level, Some(stop_level));
 }
@@ -78,8 +78,8 @@ fn test_create_order_request_with_take_profit() {
     let size = 1.0;
     let limit_level = 1.3000;
 
-    let order =
-        CreateOrderRequest::market(epic.to_string(), direction, size).with_take_profit(limit_level);
+    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None)
+        .with_take_profit(limit_level);
 
     assert_eq!(order.limit_level, Some(limit_level));
 }
@@ -91,7 +91,7 @@ fn test_create_order_request_with_reference() {
     let size = 1.0;
     let reference = "test-reference-123";
 
-    let order = CreateOrderRequest::market(epic.to_string(), direction, size)
+    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None)
         .with_reference(reference.to_string());
 
     assert_eq!(order.deal_reference, Some(reference.to_string()));
@@ -103,14 +103,14 @@ fn test_create_order_request_sell_option_to_market() {
     let size = 1.0;
     let expiry = Some("DEC-25".to_string());
     let deal_reference = Some("test-deal-ref".to_string());
-    let currency_code = Some("USD".to_string());
+    let currency_code = "USD".to_string();
 
     let order = CreateOrderRequest::sell_option_to_market(
-        &epic,
-        &size,
-        &expiry,
-        &deal_reference,
-        &currency_code,
+        epic.clone(),
+        size,
+        expiry.clone(),
+        deal_reference.clone(),
+        Some(currency_code.clone()),
     );
 
     assert_eq!(order.epic, epic);
@@ -121,14 +121,14 @@ fn test_create_order_request_sell_option_to_market() {
     assert_eq!(order.time_in_force, TimeInForce::FillOrKill);
     assert!(order.level.is_some()); // Check level is set
     assert_eq!(order.level, Some(0.0)); // Updated: default level value is 0.0
-    assert_eq!(order.guaranteed_stop, Some(false));
+    assert!(!order.guaranteed_stop);
     assert!(order.stop_level.is_none());
     assert!(order.stop_distance.is_none());
     assert!(order.limit_level.is_none());
     assert!(order.limit_distance.is_none());
     assert_eq!(order.expiry, expiry);
     assert_eq!(order.deal_reference, deal_reference);
-    assert_eq!(order.force_open, Some(true));
+    assert!(order.force_open);
     assert_eq!(order.currency_code, currency_code);
 }
 
@@ -141,11 +141,11 @@ fn test_create_order_request_buy_option_to_market() {
     let currency = "USD";
 
     let request = CreateOrderRequest::buy_option_to_market(
-        &epic.to_string(),
-        &size,
-        &Some(expiry.to_string()),
-        &Some(deal_id.to_string()),
-        &Some(currency.to_string()),
+        epic.to_string(),
+        size,
+        Some(expiry.to_string()),
+        Some(deal_id.to_string()),
+        Some(currency.to_string()),
     );
 
     assert_eq!(request.epic, epic);
@@ -155,7 +155,7 @@ fn test_create_order_request_buy_option_to_market() {
     assert_eq!(request.time_in_force, TimeInForce::FillOrKill);
     assert_eq!(request.expiry, Some(expiry.to_string()));
     assert_eq!(request.deal_reference, Some(deal_id.to_string()));
-    assert_eq!(request.currency_code, Some(currency.to_string()));
+    assert_eq!(request.currency_code, currency.to_string());
 }
 
 #[test]
@@ -369,13 +369,16 @@ fn test_create_order_request_deserialization() {
       "level": 0.0,
       "orderType": "LIMIT",
       "timeInForce": "FILL_OR_KILL",
-      "quoteId": null
+      "quoteId": null,
+      "guaranteedStop": false,
+      "forceOpen": true,
+      "currencyCode": "EUR",
+      "trailingStop": false
     }
     "#;
 
     let order: CreateOrderRequest = serde_json::from_str(json_data).unwrap();
 
-    assert_eq!(order.deal_id, None);
     assert_eq!(order.epic, "DO.D.OTCDSTXE.GG.IP");
     assert_eq!(order.expiry, Some("20-AUG-25".to_string()));
     assert_eq!(order.direction, Direction::Sell);
@@ -389,23 +392,24 @@ fn test_create_order_request_deserialization() {
 #[test]
 fn test_create_order_request_serialization() {
     let order = CreateOrderRequest {
-        deal_id: None,
         epic: "DO.D.OTCDSTXE.GG.IP".to_string(),
         direction: Direction::Sell,
         size: 5.25,
         order_type: OrderType::Limit,
         time_in_force: TimeInForce::FillOrKill,
         level: Some(0.0),
-        guaranteed_stop: None,
+        guaranteed_stop: false,
         stop_level: None,
         stop_distance: None,
         limit_level: None,
         limit_distance: None,
         expiry: Some("20-AUG-25".to_string()),
         deal_reference: None,
-        force_open: None,
-        currency_code: None,
+        force_open: false,
+        currency_code: "-".to_string(),
         quote_id: None,
+        trailing_stop: false,
+        trailing_stop_increment: None,
     };
 
     let serialized = serde_json::to_string(&order).unwrap();
@@ -488,7 +492,11 @@ fn test_create_order_request_serialization_round_trip() {
       "level": 0.0,
       "orderType": "LIMIT",
       "timeInForce": "FILL_OR_KILL",
-      "quoteId": null
+      "quoteId": null,
+      "guaranteedStop": false,
+      "forceOpen": true,
+      "currencyCode": "EUR",
+      "trailingStop": false
     }
     "#;
 
