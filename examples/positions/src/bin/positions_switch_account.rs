@@ -5,12 +5,12 @@ use ig_client::application::services::AccountService;
 /// This example shows:
 /// 1. Login to the API
 /// 2. Get positions from the current account
-/// 3. Switch to a different account (default: ZHJ5N, or specify via command line)
+/// 3. Switch to a different account (default: ZHH5N, or specify via command line)
 /// 4. Get positions from the new account
 ///
 /// To run this example:
 /// ```bash
-/// # With default account (ZHJ5N)
+/// # With default account (ZHH5N)
 /// cargo run --bin positions_switch_account
 ///
 /// # With a specific account
@@ -95,10 +95,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Step 3: Switch to target account (from command line or default to ZHJ5N)
+    // Step 3: Switch to target account (from command line or default to ZHH5N)
     let target_account = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "ZHJ5N".to_string());
+        .unwrap_or_else(|| "ZHH5N".to_string());
 
     info!("\n3. Switching to account: {}", target_account);
     info!(

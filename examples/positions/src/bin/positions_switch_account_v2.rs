@@ -76,10 +76,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Step 3: Switch to account ZHJ5N
+    // Step 3: Switch to account ZHH5N
     let target_account = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "ZHJ5N".to_string());
+        .unwrap_or_else(|| "ZHH5N".to_string());
 
     info!("\n3. Switching to account: {}", target_account);
 
