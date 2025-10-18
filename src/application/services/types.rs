@@ -1,8 +1,8 @@
 use crate::application::models::market::{MarketData, MarketNode};
 use crate::error::AppError;
-use crate::impl_json_display;
 use crate::presentation::InstrumentType;
 use chrono::{DateTime, Utc};
+use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
 
 /// Result type for listener operations that don't return a value but may return an error
@@ -22,7 +22,7 @@ pub type ListenerResult = Result<(), AppError>;
 ///
 /// This structure includes traits such as `Debug`, `Clone`, `Serialize`, `Deserialize`, `PartialEq`, `Eq`, `Hash`, and `Default`
 /// for ease of use, serialization, comparison, and hashing operations.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct DBEntry {
     /// The trading symbol identifier
     pub symbol: String,
@@ -39,8 +39,6 @@ pub struct DBEntry {
     /// Timestamp of the last update to this record
     pub last_update: DateTime<Utc>,
 }
-
-impl_json_display!(DBEntry);
 
 impl From<MarketNode> for DBEntry {
     fn from(value: MarketNode) -> Self {

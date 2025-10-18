@@ -3,14 +3,14 @@
    Email: jb@taunais.com
    Date: 13/5/25
 ******************************************************************************/
-use crate::impl_json_display;
+use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Deserializer, Serialize};
 
 const DEFAULT_ORDER_SELL_SIZE: f64 = 0.0;
 const DEFAULT_ORDER_BUY_SIZE: f64 = 10000.0;
 
 /// Order direction (buy or sell)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Direction {
     /// Buy direction (long position)
@@ -20,10 +20,8 @@ pub enum Direction {
     Sell,
 }
 
-impl_json_display!(Direction);
-
 /// Order type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum OrderType {
     /// Limit order - executed when price reaches specified level
@@ -43,7 +41,7 @@ pub enum OrderType {
 ///
 /// This enum covers various states an order can be in throughout its lifecycle,
 /// from creation to completion or cancellation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Status {
     /// Order has been amended or modified after initial creation
@@ -80,7 +78,7 @@ pub enum Status {
 }
 
 /// Order duration (time in force)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, PartialEq, Default)]
 pub enum TimeInForce {
     /// Order remains valid until cancelled by the client
     #[serde(rename = "GOOD_TILL_CANCELLED")]
@@ -98,8 +96,11 @@ pub enum TimeInForce {
 }
 
 /// Model for creating a new order
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct CreateOrderRequest {
+    /// Deal identifier for the order. Used for tracking purposes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deal_id: Option<String>,
     /// Instrument EPIC identifier
     pub epic: String,
     /// Order direction (buy or sell)
@@ -146,8 +147,8 @@ pub struct CreateOrderRequest {
     #[serde(rename = "quoteId", skip_serializing_if = "Option::is_none")]
     pub quote_id: Option<String>,
     /// Trailing stop enabled
-    #[serde(rename = "trailingStop")]
-    pub trailing_stop: bool,
+    #[serde(rename = "trailingStop", skip_serializing_if = "Option::is_none")]
+    pub trailing_stop: Option<bool>,
     /// Trailing stop increment (only if trailingStop is true)
     #[serde(
         rename = "trailingStopIncrement",
@@ -163,12 +164,14 @@ impl CreateOrderRequest {
         direction: Direction,
         size: f64,
         currency_code: Option<String>,
+        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
         let currency_code = currency_code.unwrap_or_else(|| "EUR".to_string());
 
         Self {
+            deal_id,
             epic,
             direction,
             size: rounded_size,
@@ -185,7 +188,7 @@ impl CreateOrderRequest {
             force_open: true,
             currency_code,
             quote_id: None,
-            trailing_stop: false,
+            trailing_stop: Some(false),
             trailing_stop_increment: None,
         }
     }
@@ -197,12 +200,14 @@ impl CreateOrderRequest {
         size: f64,
         level: f64,
         currency_code: Option<String>,
+        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
         let currency_code = currency_code.unwrap_or_else(|| "EUR".to_string());
 
         Self {
+            deal_id,
             epic,
             direction,
             size: rounded_size,
@@ -219,7 +224,7 @@ impl CreateOrderRequest {
             force_open: true,
             currency_code,
             quote_id: None,
-            trailing_stop: false,
+            trailing_stop: Some(false),
             trailing_stop_increment: None,
         }
     }
@@ -262,6 +267,7 @@ impl CreateOrderRequest {
         expiry: Option<String>,
         deal_reference: Option<String>,
         currency_code: Option<String>,
+        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
@@ -271,6 +277,7 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
+            deal_id,
             epic,
             direction: Direction::Sell,
             size: rounded_size,
@@ -287,7 +294,7 @@ impl CreateOrderRequest {
             force_open: true,
             currency_code,
             quote_id: None,
-            trailing_stop: false,
+            trailing_stop: Some(false),
             trailing_stop_increment: None,
         }
     }
@@ -330,6 +337,7 @@ impl CreateOrderRequest {
         expiry: Option<String>,
         deal_reference: Option<String>,
         currency_code: Option<String>,
+        deal_id: Option<String>,
         force_open: bool, // Compensate position if it is already open
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
@@ -340,6 +348,7 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
+            deal_id,
             epic,
             direction: Direction::Sell,
             size: rounded_size,
@@ -356,7 +365,7 @@ impl CreateOrderRequest {
             force_open,
             currency_code,
             quote_id: None,
-            trailing_stop: false,
+            trailing_stop: Some(false),
             trailing_stop_increment: None,
         }
     }
@@ -386,6 +395,7 @@ impl CreateOrderRequest {
         expiry: Option<String>,
         deal_reference: Option<String>,
         currency_code: Option<String>,
+        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
@@ -395,6 +405,7 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
+            deal_id,
             epic,
             direction: Direction::Buy,
             size: rounded_size,
@@ -411,7 +422,7 @@ impl CreateOrderRequest {
             force_open: true,
             currency_code: currency_code.clone(),
             quote_id: None,
-            trailing_stop: false,
+            trailing_stop: Some(false),
             trailing_stop_increment: None,
         }
     }
@@ -450,6 +461,7 @@ impl CreateOrderRequest {
         deal_reference: Option<String>,
         currency_code: Option<String>,
         force_open: bool,
+        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
@@ -459,6 +471,7 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
+            deal_id,
             epic,
             direction: Direction::Buy,
             size: rounded_size,
@@ -475,7 +488,7 @@ impl CreateOrderRequest {
             force_open,
             currency_code: currency_code.clone(),
             quote_id: None,
-            trailing_stop: false,
+            trailing_stop: Some(false),
             trailing_stop_increment: None,
         }
     }
@@ -494,7 +507,7 @@ impl CreateOrderRequest {
 
     /// Adds a trailing stop loss to the order
     pub fn with_trailing_stop_loss(mut self, trailing_stop_increment: f64) -> Self {
-        self.trailing_stop = true;
+        self.trailing_stop = Some(true);
         self.trailing_stop_increment = Some(trailing_stop_increment);
         self
     }
@@ -525,7 +538,7 @@ impl CreateOrderRequest {
 }
 
 /// Response to order creation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct CreateOrderResponse {
     /// Client-generated reference for the deal
     #[serde(rename = "dealReference")]
@@ -543,7 +556,7 @@ where
 }
 
 /// Details of a confirmed order
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct OrderConfirmation {
     /// Date and time of the confirmation
     pub date: String,
@@ -595,7 +608,7 @@ pub struct OrderConfirmation {
 }
 
 /// Model for updating an existing position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct UpdatePositionRequest {
     /// New price level for stop loss
     #[serde(rename = "stopLevel", skip_serializing_if = "Option::is_none")]
@@ -615,7 +628,7 @@ pub struct UpdatePositionRequest {
 }
 
 /// Model for closing an existing position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct ClosePositionRequest {
     /// Unique identifier for the position to close
     #[serde(rename = "dealId", skip_serializing_if = "Option::is_none")]
@@ -746,7 +759,7 @@ impl ClosePositionRequest {
 }
 
 /// Response to closing a position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct ClosePositionResponse {
     /// Client-generated reference for the closing deal
     #[serde(rename = "dealReference")]
@@ -754,7 +767,7 @@ pub struct ClosePositionResponse {
 }
 
 /// Response to updating a position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct UpdatePositionResponse {
     /// Client-generated reference for the update deal
     #[serde(rename = "dealReference")]
@@ -762,7 +775,7 @@ pub struct UpdatePositionResponse {
 }
 
 /// Model for creating a new working order
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct CreateWorkingOrderRequest {
     /// Instrument EPIC identifier
     pub epic: String,
@@ -872,21 +885,9 @@ impl CreateWorkingOrderRequest {
 }
 
 /// Response to working order creation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct CreateWorkingOrderResponse {
     /// Client-generated reference for the deal
     #[serde(rename = "dealReference")]
     pub deal_reference: String,
 }
-
-impl_json_display!(
-    CreateOrderRequest,
-    CreateOrderResponse,
-    OrderConfirmation,
-    UpdatePositionRequest,
-    ClosePositionRequest,
-    ClosePositionResponse,
-    UpdatePositionResponse,
-    CreateWorkingOrderRequest,
-    CreateWorkingOrderResponse
-);

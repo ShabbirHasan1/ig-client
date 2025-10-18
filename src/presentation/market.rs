@@ -33,7 +33,7 @@ pub enum MarketState {
 
 /// Representation of market data received from the IG Markets streaming API
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct MarketData {
+pub struct PresentationMarketData {
     /// Name of the item this data belongs to
     pub item_name: String,
     /// Position of the item in the subscription
@@ -46,7 +46,7 @@ pub struct MarketData {
     pub is_snapshot: bool,
 }
 
-impl MarketData {
+impl PresentationMarketData {
     /// Converts an ItemUpdate from the Lightstreamer API to a MarketData object
     ///
     /// # Arguments
@@ -74,7 +74,7 @@ impl MarketData {
         }
         let changed_fields = Self::create_market_fields(&changed_fields_map)?;
 
-        Ok(MarketData {
+        Ok(PresentationMarketData {
             item_name,
             item_pos,
             fields,
@@ -143,16 +143,16 @@ impl MarketData {
     }
 }
 
-impl fmt::Display for MarketData {
+impl fmt::Display for PresentationMarketData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let json = serde_json::to_string(self).map_err(|_| fmt::Error)?;
         write!(f, "{json}")
     }
 }
 
-impl From<&ItemUpdate> for MarketData {
+impl From<&ItemUpdate> for PresentationMarketData {
     fn from(item_update: &ItemUpdate) -> Self {
-        Self::from_item_update(item_update).unwrap_or_else(|_| MarketData {
+        Self::from_item_update(item_update).unwrap_or_else(|_| PresentationMarketData {
             item_name: String::new(),
             item_pos: 0,
             fields: MarketFields::default(),

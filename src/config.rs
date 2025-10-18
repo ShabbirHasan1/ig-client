@@ -1,8 +1,8 @@
 use crate::constants::{DAYS_TO_BACK_LOOK, DEFAULT_PAGE_SIZE, DEFAULT_SLEEP_TIME};
-use crate::impl_json_display;
 use crate::storage::config::DatabaseConfig;
 use crate::utils::rate_limiter::RateLimitType;
 use dotenv::dotenv;
+use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -11,7 +11,7 @@ use std::str::FromStr;
 use tracing::error;
 use tracing::log::debug;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Authentication credentials for the IG Markets API
 pub struct Credentials {
     /// Username for the IG Markets account
@@ -28,9 +28,7 @@ pub struct Credentials {
     pub account_token: Option<String>,
 }
 
-impl_json_display!(Credentials);
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Main configuration for the IG Markets API client
 pub struct Config {
     /// Authentication credentials
@@ -55,9 +53,7 @@ pub struct Config {
     pub api_version: Option<u8>,
 }
 
-impl_json_display!(Config);
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Configuration for the REST API
 pub struct RestApiConfig {
     /// Base URL for the IG Markets REST API
@@ -66,9 +62,7 @@ pub struct RestApiConfig {
     pub timeout: u64,
 }
 
-impl_json_display!(RestApiConfig);
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Configuration for the WebSocket API
 pub struct WebSocketConfig {
     /// URL for the IG Markets WebSocket API
@@ -76,8 +70,6 @@ pub struct WebSocketConfig {
     /// Reconnect interval in seconds for WebSocket connections
     pub reconnect_interval: u64,
 }
-
-impl_json_display!(WebSocketConfig);
 
 /// Gets an environment variable or returns a default value if not found or cannot be parsed
 ///

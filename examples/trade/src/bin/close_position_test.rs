@@ -66,6 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         expiry.clone(),
         deal_reference1,
         currency_code.clone(),
+        None,
     );
 
     let deal_id1 = match order_service.create_order(&session, &create_order1).await {
@@ -202,6 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         expiry.clone(),
         deal_reference2a,
         currency_code.clone(),
+        None,
     );
 
     let _deal_id2a = match order_service.create_order(&session, &create_order2a).await {
@@ -237,6 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         expiry.clone(),
         deal_reference2b,
         currency_code.clone(),
+        None,
     );
 
     let _deal_id2b = match order_service.create_order(&session, &create_order2b).await {

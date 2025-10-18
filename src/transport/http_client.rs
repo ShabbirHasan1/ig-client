@@ -210,7 +210,10 @@ impl IgHttpClientImpl {
                 }
             }
             StatusCode::UNAUTHORIZED => {
-                let body = response.text().await.unwrap_or_else(|_| "Unable to read response body".to_string());
+                let body = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unable to read response body".to_string());
                 error!("Unauthorized request to {}", url);
                 error!("Response body: {}", body);
                 Err(AppError::Unauthorized)

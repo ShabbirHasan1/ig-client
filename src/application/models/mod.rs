@@ -12,5 +12,10 @@ pub mod transaction;
 /// Working order data models
 pub mod working_order;
 
+pub use account::*;
+pub use market::*;
+pub use order::*;
+pub use transaction::*;
+
 #[cfg(test)]
 mod working_order_tests;

@@ -12,7 +12,8 @@ pub use account::AccountData;
 pub use chart::ChartData;
 pub use instrument::InstrumentType;
 pub use market::{
-    MarketData, MarketFields, MarketState, build_market_hierarchy, extract_markets_from_hierarchy,
+    MarketFields, MarketState, PresentationMarketData, build_market_hierarchy,
+    extract_markets_from_hierarchy,
 };
 pub use price::PriceData;
 pub use trade::TradeData;

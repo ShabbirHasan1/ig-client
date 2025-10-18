@@ -1,6 +1,6 @@
-use crate::impl_json_display;
 use crate::presentation::serialization::string_as_float_opt;
 use lightstreamer_rs::subscription::ItemUpdate;
+use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -29,7 +29,7 @@ pub enum DealingFlag {
 
 /// Structure for price data received from the IG Markets API
 /// Contains information about market prices and related data
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, Default)]
 pub struct PriceData {
     /// Name of the item (usually the market ID)
     pub item_name: String,
@@ -43,7 +43,7 @@ pub struct PriceData {
     pub is_snapshot: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, Default)]
 pub struct PriceFields {
     #[serde(rename = "MID_OPEN")]
     #[serde(with = "string_as_float_opt")]
@@ -259,8 +259,6 @@ pub struct PriceFields {
     dealing_flag: Option<DealingFlag>,
 }
 
-impl_json_display!(PriceFields);
-
 impl PriceData {
     /// Converts a Lightstreamer ItemUpdate to a PriceData object
     ///
@@ -395,8 +393,6 @@ impl PriceData {
         })
     }
 }
-
-impl_json_display!(PriceData);
 
 impl From<&ItemUpdate> for PriceData {
     fn from(item_update: &ItemUpdate) -> Self {

@@ -11,7 +11,7 @@ fn test_create_order_request_market() {
     let direction = Direction::Buy;
     let size = 1.0;
 
-    let order = CreateOrderRequest::market(epic.to_string(), direction.clone(), size, None);
+    let order = CreateOrderRequest::market(epic.to_string(), direction.clone(), size, None, None);
 
     assert_eq!(order.epic, epic);
     assert_eq!(order.direction, direction);
@@ -38,7 +38,8 @@ fn test_create_order_request_limit() {
     let size = 2.0;
     let level = 1.2345;
 
-    let order = CreateOrderRequest::limit(epic.to_string(), direction.clone(), size, level, None);
+    let order =
+        CreateOrderRequest::limit(epic.to_string(), direction.clone(), size, level, None, None);
 
     assert_eq!(order.epic, epic);
     assert_eq!(order.direction, direction);
@@ -65,7 +66,7 @@ fn test_create_order_request_with_stop_loss() {
     let size = 1.0;
     let stop_level = 1.2000;
 
-    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None)
+    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None, None)
         .with_stop_loss(stop_level);
 
     assert_eq!(order.stop_level, Some(stop_level));
@@ -78,7 +79,7 @@ fn test_create_order_request_with_take_profit() {
     let size = 1.0;
     let limit_level = 1.3000;
 
-    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None)
+    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None, None)
         .with_take_profit(limit_level);
 
     assert_eq!(order.limit_level, Some(limit_level));
@@ -91,7 +92,7 @@ fn test_create_order_request_with_reference() {
     let size = 1.0;
     let reference = "test-reference-123";
 
-    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None)
+    let order = CreateOrderRequest::market(epic.to_string(), direction, size, None, None)
         .with_reference(reference.to_string());
 
     assert_eq!(order.deal_reference, Some(reference.to_string()));
@@ -111,6 +112,7 @@ fn test_create_order_request_sell_option_to_market() {
         expiry.clone(),
         deal_reference.clone(),
         Some(currency_code.clone()),
+        None,
     );
 
     assert_eq!(order.epic, epic);
@@ -146,6 +148,7 @@ fn test_create_order_request_buy_option_to_market() {
         Some(expiry.to_string()),
         Some(deal_id.to_string()),
         Some(currency.to_string()),
+        None,
     );
 
     assert_eq!(request.epic, epic);
@@ -392,6 +395,7 @@ fn test_create_order_request_deserialization() {
 #[test]
 fn test_create_order_request_serialization() {
     let order = CreateOrderRequest {
+        deal_id: None,
         epic: "DO.D.OTCDSTXE.GG.IP".to_string(),
         direction: Direction::Sell,
         size: 5.25,
@@ -408,7 +412,7 @@ fn test_create_order_request_serialization() {
         force_open: false,
         currency_code: "-".to_string(),
         quote_id: None,
-        trailing_stop: false,
+        trailing_stop: Some(false),
         trailing_stop_increment: None,
     };
 

@@ -1,12 +1,12 @@
 use crate::application::models::account::AccountTransaction;
-use crate::impl_json_display;
 use crate::utils::parsing::{ParsedOptionInfo, parse_instrument_name};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Utc, Weekday};
+use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 /// Represents a processed transaction from IG Markets with parsed fields
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, DisplaySimple, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct StoreTransaction {
     /// Date and time when the transaction was executed
     pub deal_date: DateTime<Utc>,
@@ -29,8 +29,6 @@ pub struct StoreTransaction {
     /// Original JSON string of the transaction
     pub raw_json: String,
 }
-
-impl_json_display!(StoreTransaction);
 
 impl From<AccountTransaction> for StoreTransaction {
     fn from(raw: AccountTransaction) -> Self {

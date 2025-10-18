@@ -1,5 +1,5 @@
 use ig_client::application::services::Listener;
-use ig_client::presentation::MarketData;
+use ig_client::presentation::PresentationMarketData;
 use lightstreamer_rs::subscription::{ItemUpdate, SubscriptionListener};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -11,7 +11,7 @@ fn test_market_listener_new() {
     let counter_clone = counter.clone();
 
     // Create a listener with a callback that increments the counter
-    let listener = Listener::new(move |data: &MarketData| {
+    let listener = Listener::new(move |data: &PresentationMarketData| {
         let mut count = counter_clone.lock().unwrap();
         *count += 1;
         // Verify that the MarketData object has the expected fields
@@ -36,7 +36,10 @@ fn test_market_listener_new() {
     };
 
     // Call on_item_update that internally calls the callback
-    <Listener<MarketData> as SubscriptionListener>::on_item_update(&listener, &item_update);
+    <Listener<PresentationMarketData> as SubscriptionListener>::on_item_update(
+        &listener,
+        &item_update,
+    );
 
     // Verify that the callback was called
     assert_eq!(*counter.lock().unwrap(), 1);
@@ -46,7 +49,7 @@ fn test_market_listener_new() {
 #[allow(clippy::assertions_on_constants)]
 fn test_market_listener_mock() {
     // Verify that we can create a mock of the listener
-    let listener = Listener::new(|data: &MarketData| {
+    let listener = Listener::new(|data: &PresentationMarketData| {
         // Simply verify that the MarketData object has the expected fields
         assert!(data.to_string().contains("item_name"));
         Ok(())
@@ -68,6 +71,9 @@ fn test_market_listener_mock() {
         changed_fields: HashMap::new(),
     };
 
-    <Listener<MarketData> as SubscriptionListener>::on_item_update(&listener, &item_update);
+    <Listener<PresentationMarketData> as SubscriptionListener>::on_item_update(
+        &listener,
+        &item_update,
+    );
     assert!(true);
 }

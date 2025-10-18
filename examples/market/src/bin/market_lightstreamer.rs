@@ -1,7 +1,7 @@
 use ig_client::application::services::Listener;
 use ig_client::config::Config;
 use ig_client::error::AppError;
-use ig_client::presentation::MarketData;
+use ig_client::presentation::PresentationMarketData;
 use ig_client::session::auth::IgAuth;
 use ig_client::session::interface::IgAuthenticator;
 use ig_client::utils::logger::setup_logger;
@@ -14,7 +14,7 @@ use tracing::{error, info, warn};
 
 const MAX_CONNECTION_ATTEMPTS: u64 = 3;
 
-fn callback(update: &MarketData) -> Result<(), AppError> {
+fn callback(update: &PresentationMarketData) -> Result<(), AppError> {
     let item = serde_json::to_string_pretty(&update)?;
     info!("MarketData: {}", item);
     Ok(())

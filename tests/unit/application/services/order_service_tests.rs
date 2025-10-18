@@ -53,6 +53,7 @@ fn test_create_order_request_market() {
         Direction::Buy,
         1.0,
         None,
+        None,
     );
 
     // Verify that the fields were set correctly
@@ -71,6 +72,7 @@ fn test_create_order_request_limit() {
         Direction::Sell,
         1.0,
         1.2345,
+        None,
         None,
     );
 
@@ -94,6 +96,7 @@ fn test_create_order_request_with_reference() {
         Direction::Buy,
         1.0,
         None,
+        None,
     )
     .with_reference("TEST_REF".to_string());
 
@@ -109,6 +112,7 @@ fn test_create_order_request_with_stop_loss() {
         Direction::Buy,
         1.0,
         None,
+        None,
     )
     .with_stop_loss(1.2000);
 
@@ -123,6 +127,7 @@ fn test_create_order_request_with_take_profit() {
         "OP.D.OTCDAX1.021100P.IP".to_string(),
         Direction::Buy,
         1.0,
+        None,
         None,
     )
     .with_take_profit(1.3000);

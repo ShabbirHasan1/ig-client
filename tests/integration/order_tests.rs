@@ -96,6 +96,7 @@ fn test_create_and_close_position() {
             0.2, // Very small size to minimize risk
             limit_price,
             None,
+            None,
         )
         .with_reference(format!("test_{}", chrono::Utc::now().timestamp()));
 
@@ -259,6 +260,7 @@ fn test_closed_market_serialization() {
             0.2,   // Small size
             100.0, // Arbitrary price
             None,
+            None,
         )
         .with_reference(format!("test_closed_{}", chrono::Utc::now().timestamp()));
 
@@ -411,6 +413,7 @@ fn test_update_position() {
                 Direction::Buy,
                 0.1, // Very small size to minimize risk
                 limit_price,
+                None,
                 None,
             )
             .with_reference(format!("test_{}", chrono::Utc::now().timestamp()));

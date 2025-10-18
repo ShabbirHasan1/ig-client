@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let deal_reference = Some(nanoid!(30, &nanoid::alphabet::SAFE));
     info!("{:?}", deal_reference);
     let create_order =
-        CreateOrderRequest::market(epic.to_string(), Direction::Buy, size, currency_code);
+        CreateOrderRequest::market(epic.to_string(), Direction::Buy, size, currency_code, None);
 
     // Create a market service
     // let market_service = MarketServiceImpl::new(config_no_trade, client.clone());

@@ -1,4 +1,3 @@
-mod display_tests;
 mod finance_tests;
 mod parsing_tests;
 mod rate_limiter_tests;

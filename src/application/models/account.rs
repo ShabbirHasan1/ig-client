@@ -5,8 +5,8 @@
 ******************************************************************************/
 use super::order::{Direction, OrderType, Status, TimeInForce};
 use crate::application::models::market::InstrumentType;
-use crate::impl_json_display;
 use crate::presentation::MarketState;
+use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Add;
@@ -79,7 +79,7 @@ pub struct ActivityPaging {
     pub next: Option<String>,
 }
 
-#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, DisplaySimple, Deserialize, Serialize)]
 /// Type of account activity
 pub enum ActivityType {
     /// Activity related to editing stop and limit orders
@@ -97,7 +97,7 @@ pub enum ActivityType {
 }
 
 /// Individual activity record
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct Activity {
     /// Date and time of the activity
     pub date: String,
@@ -139,7 +139,7 @@ pub struct Activity {
 
 /// Detailed information about an activity
 /// Only available when using the detailed=true parameter
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct ActivityDetails {
     /// Client-generated reference for the deal
     #[serde(rename = "dealReference", default)]
@@ -189,7 +189,7 @@ pub struct ActivityDetails {
 }
 
 /// Types of actions that can be performed on an activity
-#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, DisplaySimple, Deserialize, Serialize)]
 pub enum ActionType {
     /// A limit order was deleted
     #[serde(rename = "LIMIT_ORDER_DELETED")]
@@ -244,10 +244,8 @@ pub enum ActionType {
     WorkingOrderDeleted,
 }
 
-impl_json_display!(ActionType);
-
 /// Action associated with an activity
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct ActivityAction {
     /// Type of action
     #[serde(rename = "actionType")]
@@ -258,7 +256,7 @@ pub struct ActivityAction {
 }
 
 /// Open positions
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize, Default)]
 pub struct Positions {
     /// List of open positions
     pub positions: Vec<Position>,
@@ -293,7 +291,7 @@ impl Positions {
 }
 
 /// Individual position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct Position {
     /// Details of the position
     pub position: PositionDetails,
@@ -324,7 +322,7 @@ impl Add for Position {
 }
 
 /// Details of a position
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct PositionDetails {
     /// Size of one contract
     #[serde(rename = "contractSize")]
@@ -406,7 +404,7 @@ impl Add for PositionDetails {
 }
 
 /// Market information for a position
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct PositionMarket {
     /// Human-readable name of the instrument
     #[serde(rename = "instrumentName")]
@@ -456,7 +454,7 @@ pub struct PositionMarket {
 }
 
 /// Working orders
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct WorkingOrders {
     /// List of pending working orders
     #[serde(rename = "workingOrders")]
@@ -464,18 +462,18 @@ pub struct WorkingOrders {
 }
 
 /// Working order
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct WorkingOrder {
     /// Details of the working order
     #[serde(rename = "workingOrderData")]
     pub working_order_data: WorkingOrderData,
     /// Market information for the working order
     #[serde(rename = "marketData")]
-    pub market_data: MarketData,
+    pub market_data: AccountMarketData,
 }
 
 /// Details of a working order
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct WorkingOrderData {
     /// Unique identifier for the deal
     #[serde(rename = "dealId")]
@@ -537,8 +535,8 @@ pub struct WorkingOrderData {
 }
 
 /// Market data for a working order
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct MarketData {
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
+pub struct AccountMarketData {
     /// Human-readable name of the instrument
     #[serde(rename = "instrumentName")]
     pub instrument_name: String,
@@ -590,7 +588,7 @@ pub struct MarketData {
 }
 
 /// Transaction history
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct TransactionHistory {
     /// List of account transactions
     pub transactions: Vec<AccountTransaction>,
@@ -599,7 +597,7 @@ pub struct TransactionHistory {
 }
 
 /// Transaction metadata
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct TransactionMetadata {
     /// Pagination information
     #[serde(rename = "pageData")]
@@ -609,7 +607,7 @@ pub struct TransactionMetadata {
 }
 
 /// Pagination information
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct PageData {
     /// Current page number
     #[serde(rename = "pageNumber")]
@@ -623,7 +621,7 @@ pub struct PageData {
 }
 
 /// Individual transaction
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct AccountTransaction {
     /// Date and time of the transaction
     pub date: String,
@@ -660,12 +658,3 @@ pub struct AccountTransaction {
     #[serde(rename = "cashTransaction")]
     pub cash_transaction: bool,
 }
-
-impl_json_display!(
-    Positions,
-    Position,
-    AccountTransaction,
-    MarketData,
-    PositionDetails,
-    PositionMarket
-);
