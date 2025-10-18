@@ -505,19 +505,19 @@ impl CreateOrderRequest {
         self
     }
 
-    // Adds a stop distance to the order
+    /// Adds a stop distance to the order
     pub fn with_stop_distance(mut self, stop_distance: f64) -> Self {
         self.stop_distance = Some(stop_distance);
         self
     }
 
-    // Adds a limit distance to the order
+    /// Adds a limit distance to the order
     pub fn with_limit_distance(mut self, limit_distance: f64) -> Self {
         self.limit_distance = Some(limit_distance);
         self
     }
 
-    // Adds a guaranteed stop to the order
+    /// Adds a guaranteed stop to the order
     pub fn with_guaranteed_stop(mut self, guaranteed: bool) -> Self {
         self.guaranteed_stop = guaranteed;
         self

@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let epic = "CS.D.EURUSD.CEEM.IP"; // Example epic for testing
-    let expiry = Some(
+    let _expiry = Some(
         chrono::Local::now()
             .format("%d-%b-%y")
             .to_string()
@@ -126,12 +126,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Direction::Sell, // Assuming we are closing a buy position
         size,
     );
-    // let close_request = ClosePositionRequest::close_option_to_market_by_epic(
-    //     epic.to_string(),
-    //     expiry.clone().unwrap(),
-    //     Direction::Sell, // Assuming we are closing a buy position
-    //     size,
-    // );
     let close_result = order_service.close_position(&session, &close_request).await;
 
     match close_result {
