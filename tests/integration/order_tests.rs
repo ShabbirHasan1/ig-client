@@ -95,13 +95,14 @@ fn test_create_and_close_position() {
             Direction::Buy,
             0.2, // Very small size to minimize risk
             limit_price,
+            None,
         )
         .with_reference(format!("test_{}", chrono::Utc::now().timestamp()));
 
         // Set required fields
         create_order.expiry = Some("JUL-25".to_string()); // Use actual expiry date for options
-        create_order.guaranteed_stop = Some(false); // Specify whether to use a guaranteed stop
-        create_order.currency_code = Some("EUR".to_string()); // Set the currency code for the order
+        create_order.guaranteed_stop = false; // Specify whether to use a guaranteed stop
+        create_order.currency_code = "EUR".to_string(); // Set the currency code for the order
         create_order.time_in_force = TimeInForce::FillOrKill; // Use fill or kill
 
         // Create the position
@@ -257,13 +258,14 @@ fn test_closed_market_serialization() {
             Direction::Buy,
             0.2,   // Small size
             100.0, // Arbitrary price
+            None,
         )
         .with_reference(format!("test_closed_{}", chrono::Utc::now().timestamp()));
 
         // Set required fields
         create_order.expiry = Some("JUL-25".to_string());
-        create_order.guaranteed_stop = Some(false);
-        create_order.currency_code = Some("EUR".to_string());
+        create_order.guaranteed_stop = false;
+        create_order.currency_code = "EUR".to_string();
         create_order.time_in_force = ig_client::application::models::order::TimeInForce::FillOrKill;
 
         // Attempt to create the position (should be rejected due to closed market)
@@ -409,13 +411,14 @@ fn test_update_position() {
                 Direction::Buy,
                 0.1, // Very small size to minimize risk
                 limit_price,
+                None,
             )
             .with_reference(format!("test_{}", chrono::Utc::now().timestamp()));
 
             // Set required fields
             create_order.expiry = Some("JUL-25".to_string()); // Use actual expiry date for options
-            create_order.guaranteed_stop = Some(false); // Specify whether to use a guaranteed stop
-            create_order.currency_code = Some("EUR".to_string()); // Set the currency code for the order
+            create_order.guaranteed_stop = false; // Specify whether to use a guaranteed stop
+            create_order.currency_code = "EUR".to_string(); // Set the currency code for the order
             create_order.time_in_force =
                 ig_client::application::models::order::TimeInForce::FillOrKill; // Use fill or kill
 
