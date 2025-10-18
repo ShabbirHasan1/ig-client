@@ -17,11 +17,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Load configuration
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::NonTradingAccount,
-        0.7,
-    ));
-    info!("Loaded configuration → {}", config.rest_api.base_url);
+    let mut config = Config::with_rate_limit_type(RateLimitType::NonTradingAccount, 0.7);
+    // Use API v3 (OAuth) - requires Authorization + IG-ACCOUNT-ID headers
+    config.api_version = Some(3);
+    let config = Arc::new(config);
+    info!(
+        "Loaded configuration → {} (API v{})",
+        config.rest_api.base_url,
+        config.api_version.unwrap_or(3)
+    );
 
     // Create the HTTP client
     let client = Arc::new(IgHttpClientImpl::new(config.clone()));

@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::error::{AppError, AuthError};
+use crate::session::response::OAuthToken;
 use crate::utils::rate_limiter::{
     RateLimitType, RateLimiter, RateLimiterStats, app_non_trading_limiter, create_rate_limiter,
 };
@@ -74,12 +75,16 @@ impl TokenTimer {
 }
 
 /// Session information for IG Markets API authentication
+///
+/// Supports both API v2 (CST/X-SECURITY-TOKEN) and v3 (OAuth) authentication.
 #[derive(Debug, Clone)]
 pub struct IgSession {
-    /// Client Session Token (CST) used for authentication
+    /// Client Session Token (CST) used for authentication (API v2)
     pub cst: String,
-    /// Security token used for authentication
+    /// Security token used for authentication (API v2)
     pub token: String,
+    /// OAuth token information (API v3)
+    pub oauth_token: Option<OAuthToken>,
     /// Account ID associated with the session
     pub account_id: String,
     /// Base URL for API requests
@@ -108,6 +113,7 @@ impl IgSession {
             base_url: String::new(),
             cst,
             token,
+            oauth_token: None,
             client_id: String::new(),
             account_id,
             lightstreamer_endpoint: String::new(),
@@ -144,6 +150,7 @@ impl IgSession {
             base_url,
             cst,
             token: security_token,
+            oauth_token: None,
             client_id,
             account_id,
             lightstreamer_endpoint,
@@ -166,6 +173,7 @@ impl IgSession {
         Self {
             cst,
             token,
+            oauth_token: None,
             account_id,
             base_url: String::new(),
             client_id: String::new(),
@@ -182,6 +190,7 @@ impl IgSession {
         Self {
             cst,
             token,
+            oauth_token: None,
             account_id,
             base_url: String::new(),
             client_id: String::new(),
@@ -241,13 +250,83 @@ impl IgSession {
             timer.refresh();
         }
     }
+
+    /// Checks if this session is using OAuth (API v3) authentication
+    ///
+    /// # Returns
+    /// `true` if the session has OAuth tokens, `false` otherwise
+    pub fn is_oauth(&self) -> bool {
+        self.oauth_token.is_some()
+    }
+
+    /// Checks if this session is using CST/X-SECURITY-TOKEN (API v2) authentication
+    ///
+    /// # Returns
+    /// `true` if the session uses CST tokens, `false` otherwise
+    pub fn is_cst_auth(&self) -> bool {
+        !self.cst.is_empty() && !self.token.is_empty() && self.oauth_token.is_none()
+    }
+
+    /// Creates a new session with OAuth authentication (API v3)
+    ///
+    /// # Arguments
+    /// * `oauth_token` - The OAuth token information
+    /// * `account_id` - Account ID associated with the session
+    /// * `client_id` - Client ID provided by the API
+    /// * `lightstreamer_endpoint` - Lightstreamer endpoint for real-time data
+    /// * `config` - Configuration for rate limiting
+    ///
+    /// # Returns
+    /// A new IgSession configured for OAuth authentication
+    pub fn from_oauth(
+        oauth_token: OAuthToken,
+        account_id: String,
+        client_id: String,
+        lightstreamer_endpoint: String,
+        config: &Config,
+    ) -> Self {
+        Self {
+            cst: String::new(),
+            token: String::new(),
+            oauth_token: Some(oauth_token),
+            account_id,
+            base_url: config.rest_api.base_url.clone(),
+            client_id,
+            lightstreamer_endpoint,
+            api_key: config.credentials.api_key.clone(),
+            rate_limiter: Some(create_rate_limiter(
+                config.rate_limit_type,
+                Some(config.rate_limit_safety_margin),
+            )),
+            concurrent_mode: Arc::new(AtomicBool::new(false)),
+            token_timer: Arc::new(Mutex::new(TokenTimer::new())),
+        }
+    }
 }
 
 /// Trait for authenticating with the IG Markets API
 #[async_trait::async_trait]
 pub trait IgAuthenticator: Send + Sync {
     /// Logs in to the IG Markets API and returns a new session
+    ///
+    /// Automatically selects API v2 or v3 based on configuration.
+    /// Defaults to v3 (OAuth) if not specified.
     async fn login(&self) -> Result<IgSession, AuthError>;
+
+    /// Logs in using API v2 (CST/X-SECURITY-TOKEN authentication)
+    ///
+    /// # Returns
+    /// * `Ok(IgSession)` - A new session with CST and X-SECURITY-TOKEN
+    /// * `Err(AuthError)` - If authentication fails
+    async fn login_v2(&self) -> Result<IgSession, AuthError>;
+
+    /// Logs in using API v3 (OAuth authentication)
+    ///
+    /// # Returns
+    /// * `Ok(IgSession)` - A new session with OAuth tokens
+    /// * `Err(AuthError)` - If authentication fails
+    async fn login_v3(&self) -> Result<IgSession, AuthError>;
+
     /// Refreshes an existing session with the IG Markets API
     async fn refresh(&self, session: &IgSession) -> Result<IgSession, AuthError>;
 

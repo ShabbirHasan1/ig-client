@@ -147,9 +147,34 @@ impl IgHttpClientImpl {
 
     /// Adds authentication headers to a request
     fn add_auth_headers(&self, builder: RequestBuilder, session: &IgSession) -> RequestBuilder {
-        builder
-            .header("CST", &session.cst)
-            .header("X-SECURITY-TOKEN", &session.token)
+        // Check if using OAuth (v3) or CST (v2) authentication
+        if let Some(oauth_token) = &session.oauth_token {
+            // Use OAuth Bearer token + IG-ACCOUNT-ID header
+            // Per IG API docs: OAuth requires both Authorization and IG-ACCOUNT-ID headers
+            debug!("Using OAuth authentication (Bearer token)");
+            debug!(
+                "   Access token: {}...",
+                &oauth_token.access_token[..10.min(oauth_token.access_token.len())]
+            );
+            debug!("   Account ID: {}", session.account_id);
+            builder
+                .header(
+                    "Authorization",
+                    format!("Bearer {}", oauth_token.access_token),
+                )
+                .header("IG-ACCOUNT-ID", &session.account_id)
+        } else {
+            // Use CST and X-SECURITY-TOKEN (v2)
+            debug!("Using CST authentication");
+            debug!(
+                "   CST length: {}, Token length: {}",
+                session.cst.len(),
+                session.token.len()
+            );
+            builder
+                .header("CST", &session.cst)
+                .header("X-SECURITY-TOKEN", &session.token)
+        }
     }
 
     /// Processes the HTTP response and handles rate limiting centrally

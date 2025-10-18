@@ -208,6 +208,7 @@ fn test_pg_pool_invalid_url() {
             url: "postgres://invalid_url_for_test".to_string(),
             max_connections: 5,
         },
+        api_version: Some(2),
         sleep_hours: 1,
         page_size: 100,
         days_to_look_back: 30,

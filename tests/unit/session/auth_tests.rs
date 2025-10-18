@@ -35,6 +35,7 @@ fn create_test_config(server_url: &str) -> Config {
         sleep_hours: 1,
         page_size: 20,
         days_to_look_back: 7,
+        api_version: Some(2),
     }
 }
 

@@ -12,6 +12,7 @@ use ig_client::{
 };
 use tokio::runtime::Runtime;
 use tracing::info;
+use tracing::warn;
 
 #[test]
 #[ignore]
@@ -608,34 +609,39 @@ fn test_update_position() {
         info!("Updating position with deal ID: {}", deal_id);
 
         // Get current price
-        let current_price = match position.position.direction {
+        let current_price_opt = match position.position.direction {
             Direction::Buy => position.market.offer,
             Direction::Sell => position.market.bid,
         };
 
-        // Set stop 20 points away from current price
-        let (stop_level, limit_level) = match position.position.direction {
-            Direction::Buy => (current_price - 20.0, current_price + 20.0),
-            Direction::Sell => (current_price + 20.0, current_price - 20.0),
-        };
+        // Only proceed if current price is available
+        if let Some(current_price) = current_price_opt {
+            // Set stop 20 points away from current price
+            let (stop_level, limit_level) = match position.position.direction {
+                Direction::Buy => (current_price - 20.0, current_price + 20.0),
+                Direction::Sell => (current_price + 20.0, current_price - 20.0),
+            };
 
-        let update_request = UpdatePositionRequest {
-            stop_level: Some(stop_level),
-            limit_level: Some(limit_level),
-            trailing_stop: Some(false),
-            trailing_stop_distance: None,
-        };
+            let update_request = UpdatePositionRequest {
+                stop_level: Some(stop_level),
+                limit_level: Some(limit_level),
+                trailing_stop: Some(false),
+                trailing_stop_distance: None,
+            };
 
-        info!("  Setting stop level: {}", stop_level);
-        info!("  Setting limit level: {}", limit_level);
+            info!("  Setting stop level: {}", stop_level);
+            info!("  Setting limit level: {}", limit_level);
 
-        let result = order_service
-            .update_position(&session, deal_id, &update_request)
-            .await;
+            let result = order_service
+                .update_position(&session, deal_id, &update_request)
+                .await;
 
-        match result {
-            Ok(_) => info!("Position updated successfully"),
-            Err(e) => info!("Failed to update position: {:?}", e),
+            match result {
+                Ok(_) => info!("Position updated successfully"),
+                Err(e) => info!("Failed to update position: {:?}", e),
+            }
+        } else {
+            warn!("  No current price available for position, skipping update");
         }
     });
 }

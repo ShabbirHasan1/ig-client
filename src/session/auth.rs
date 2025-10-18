@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     error::AuthError,
     session::interface::{IgAuthenticator, IgSession},
-    session::response::{AccountSwitchRequest, AccountSwitchResponse, SessionResp},
+    session::response::{AccountSwitchRequest, AccountSwitchResponse, SessionResp, SessionV3Resp},
     utils::rate_limiter::app_non_trading_limiter,
 };
 use async_trait::async_trait;
@@ -66,6 +66,23 @@ impl<'a> IgAuth<'a> {
 #[async_trait]
 impl IgAuthenticator for IgAuth<'_> {
     async fn login(&self) -> Result<IgSession, AuthError> {
+        // Determine which API version to use
+        // Default to v3 (OAuth) - requires Authorization + IG-ACCOUNT-ID headers
+        let api_version = self.cfg.api_version.unwrap_or(3);
+
+        debug!("Using API version {} for authentication", api_version);
+
+        match api_version {
+            2 => self.login_v2().await,
+            3 => self.login_v3().await,
+            _ => {
+                error!("Invalid API version: {}. Must be 2 or 3", api_version);
+                Err(AuthError::Unexpected(StatusCode::BAD_REQUEST))
+            }
+        }
+    }
+
+    async fn login_v2(&self) -> Result<IgSession, AuthError> {
         // Configuration for retries
         const MAX_RETRIES: u32 = 3;
         const INITIAL_RETRY_DELAY_MS: u64 = 10000; // 10 seconds
@@ -87,7 +104,7 @@ impl IgAuthenticator for IgAuth<'_> {
             let password = self.cfg.credentials.password.trim();
 
             // Log the request details for debugging
-            debug!("Login request to URL: {}", url);
+            debug!("Login v2 request to URL: {}", url);
             debug!("Using API key (length): {}", api_key.len());
             debug!("Using username: {}", username);
 
@@ -132,7 +149,7 @@ impl IgAuthenticator for IgAuth<'_> {
             };
 
             // Log the response status and headers for debugging
-            debug!("Login response status: {}", resp.status());
+            debug!("Login v2 response status: {}", resp.status());
             trace!("Response headers: {:#?}", resp.headers());
 
             match resp.status() {
@@ -211,18 +228,172 @@ impl IgAuthenticator for IgAuth<'_> {
                         if retry_count < MAX_RETRIES {
                             retry_count += 1;
                             // Using a longer delay and adding some randomness to avoid patterns
-                            let jitter = rand::random::<u64>() % 5000; // Hasta 5 segundos de jitter
+                            let jitter = rand::random::<u64>() % 5000;
                             let delay = retry_delay_ms + jitter;
                             warn!(
                                 "Rate limit exceeded. Retrying in {} ms (attempt {} of {})",
                                 delay, retry_count, MAX_RETRIES
                             );
 
-                            // Esperar antes de reintentar
                             tokio::time::sleep(Duration::from_millis(delay)).await;
 
                             // Increase the waiting time exponentially for the next retry
                             retry_delay_ms *= 2; // Exponential backoff
+                            continue;
+                        } else {
+                            error!(
+                                "Maximum retry attempts ({}) reached. Giving up.",
+                                MAX_RETRIES
+                            );
+                            return Err(AuthError::RateLimitExceeded);
+                        }
+                    }
+
+                    error!("Response body: {}", body);
+                    return Err(AuthError::BadCredentials);
+                }
+                other => {
+                    error!("Authentication failed with unexpected status: {}", other);
+                    let body = resp
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Could not read response body".to_string());
+                    error!("Response body: {}", body);
+                    return Err(AuthError::Unexpected(other));
+                }
+            }
+        }
+    }
+
+    async fn login_v3(&self) -> Result<IgSession, AuthError> {
+        // Configuration for retries
+        const MAX_RETRIES: u32 = 3;
+        const INITIAL_RETRY_DELAY_MS: u64 = 10000; // 10 seconds
+
+        let mut retry_count = 0;
+        let mut retry_delay_ms = INITIAL_RETRY_DELAY_MS;
+
+        loop {
+            // Use the global app rate limiter for unauthenticated requests
+            let limiter = app_non_trading_limiter();
+            limiter.wait().await;
+
+            let url = self.rest_url("session");
+
+            // Ensure credentials are trimmed
+            let api_key = self.cfg.credentials.api_key.trim();
+            let username = self.cfg.credentials.username.trim();
+            let password = self.cfg.credentials.password.trim();
+
+            // Log the request details for debugging
+            debug!("Login v3 request to URL: {}", url);
+            debug!("Using API key (length): {}", api_key.len());
+            debug!("Using username: {}", username);
+
+            if retry_count > 0 {
+                debug!("Retry attempt {} of {}", retry_count, MAX_RETRIES);
+            }
+
+            // Create the body for API v3
+            let body = serde_json::json!({
+                "identifier": username,
+                "password": password,
+                "encryptedPassword": null
+            });
+
+            debug!(
+                "Request body: {}",
+                serde_json::to_string(&body).unwrap_or_default()
+            );
+
+            // Create a new client for each request
+            let client = Client::builder()
+                .user_agent(USER_AGENT)
+                .build()
+                .expect("reqwest client");
+
+            // Make the request with version 3
+            let resp = match client
+                .post(url.clone())
+                .header("X-IG-API-KEY", api_key)
+                .header("Content-Type", "application/json")
+                .header("Version", "3")
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(resp) => resp,
+                Err(e) => {
+                    error!("Failed to send login v3 request: {}", e);
+                    return Err(AuthError::Unexpected(StatusCode::INTERNAL_SERVER_ERROR));
+                }
+            };
+
+            // Log the response status and headers for debugging
+            debug!("Login v3 response status: {}", resp.status());
+            trace!("Response headers: {:#?}", resp.headers());
+
+            match resp.status() {
+                StatusCode::OK => {
+                    // Parse the JSON response
+                    let json: SessionV3Resp = resp.json().await?;
+
+                    debug!("Successfully authenticated with OAuth");
+                    debug!("Account ID: {}", json.account_id);
+                    debug!("Client ID: {}", json.client_id);
+                    debug!("Lightstreamer endpoint: {}", json.lightstreamer_endpoint);
+                    debug!(
+                        "Access token length: {}",
+                        json.oauth_token.access_token.len()
+                    );
+                    debug!("Token expires in: {} seconds", json.oauth_token.expires_in);
+
+                    // Create a new session with OAuth tokens
+                    let session = IgSession::from_oauth(
+                        json.oauth_token,
+                        json.account_id,
+                        json.client_id,
+                        json.lightstreamer_endpoint,
+                        self.cfg,
+                    );
+
+                    // Log rate limiter stats if available
+                    if let Some(stats) = session.get_rate_limit_stats().await {
+                        debug!("Rate limiter initialized: {}", stats);
+                    }
+
+                    return Ok(session);
+                }
+                StatusCode::UNAUTHORIZED => {
+                    error!("Authentication failed with UNAUTHORIZED");
+                    let body = resp
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Could not read response body".to_string());
+                    error!("Response body: {}", body);
+                    return Err(AuthError::BadCredentials);
+                }
+                StatusCode::FORBIDDEN => {
+                    error!("Authentication failed with FORBIDDEN");
+                    let body = resp
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Could not read response body".to_string());
+
+                    if body.contains("exceeded-api-key-allowance") {
+                        error!("Rate Limit Exceeded: {}", &body);
+
+                        if retry_count < MAX_RETRIES {
+                            retry_count += 1;
+                            let jitter = rand::random::<u64>() % 5000;
+                            let delay = retry_delay_ms + jitter;
+                            warn!(
+                                "Rate limit exceeded. Retrying in {} ms (attempt {} of {})",
+                                delay, retry_count, MAX_RETRIES
+                            );
+
+                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                            retry_delay_ms *= 2;
                             continue;
                         } else {
                             error!(
@@ -389,17 +560,32 @@ impl IgAuthenticator for IgAuth<'_> {
             .expect("reqwest client");
 
         // Make the PUT request to switch accounts
-        let resp = client
+        let mut request = client
             .put(url)
             .header("X-IG-API-KEY", api_key)
-            .header("CST", &session.cst)
-            .header("X-SECURITY-TOKEN", &session.token)
             .header("Version", "1")
             .header("Content-Type", "application/json; charset=UTF-8")
-            .header("Accept", "application/json; charset=UTF-8")
-            .json(&body)
-            .send()
-            .await?;
+            .header("Accept", "application/json; charset=UTF-8");
+
+        // Add authentication headers based on session type
+        if let Some(oauth_token) = &session.oauth_token {
+            // Use OAuth Bearer token + IG-ACCOUNT-ID header
+            debug!("Using OAuth authentication for account switch");
+            request = request
+                .header(
+                    "Authorization",
+                    format!("Bearer {}", oauth_token.access_token),
+                )
+                .header("IG-ACCOUNT-ID", &session.account_id);
+        } else {
+            // Use CST and X-SECURITY-TOKEN (v2)
+            debug!("Using CST authentication for account switch");
+            request = request
+                .header("CST", &session.cst)
+                .header("X-SECURITY-TOKEN", &session.token);
+        }
+
+        let resp = request.json(&body).send().await?;
 
         // Log the response status and headers for debugging
         debug!("Account switch response status: {}", resp.status());
@@ -454,13 +640,23 @@ impl IgAuthenticator for IgAuth<'_> {
                 info!("Account switch successful to: {}", account_id);
                 trace!("Account switch response: {:?}", switch_response);
 
-                // Return a new session with the updated account ID and new tokens from the response headers
-                Ok(IgSession::from_config(
-                    new_cst,
-                    new_token,
-                    account_id.to_string(),
-                    self.cfg,
-                ))
+                // Return a new session with the updated account ID
+                // If the original session used OAuth, preserve the OAuth tokens
+                // Otherwise, use the new CST and X-SECURITY-TOKEN from the response
+                if session.oauth_token.is_some() {
+                    // OAuth session - preserve OAuth tokens and update account ID
+                    let mut new_session = session.clone();
+                    new_session.account_id = account_id.to_string();
+                    Ok(new_session)
+                } else {
+                    // CST session - use new tokens from response headers
+                    Ok(IgSession::from_config(
+                        new_cst,
+                        new_token,
+                        account_id.to_string(),
+                        self.cfg,
+                    ))
+                }
             }
             other => {
                 error!("Account switch failed with status: {}", other);
