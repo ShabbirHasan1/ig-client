@@ -17,10 +17,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     // Load configuration from environment variables
-    let mut config = Config::with_rate_limit_type(RateLimitType::NonTradingAccount, 0.7);
-    // Use API v3 (OAuth) by default
-    config.api_version = Some(3);
-    let config = Arc::new(config);
+    let config = Arc::new(Config::with_rate_limit_type(
+        RateLimitType::NonTradingAccount,
+        0.7,
+    ));
 
     // Create HTTP client
     let client = Arc::new(IgHttpClientImpl::new(config.clone()));

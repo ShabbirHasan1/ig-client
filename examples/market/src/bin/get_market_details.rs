@@ -41,10 +41,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "DO.D.OTCDDAX.175.IP",
     ];
 
-    let mut config = Config::with_rate_limit_type(RateLimitType::NonTradingAccount, 0.7);
-    // Use API v3 (OAuth) by default
-    config.api_version = Some(3);
-    let config = Arc::new(config);
+    let config = Arc::new(Config::with_rate_limit_type(
+        RateLimitType::NonTradingAccount,
+        0.7,
+    ));
     let client = Arc::new(IgHttpClientImpl::new(config.clone()));
     let auth = IgAuth::new(&config);
     let market_service = MarketServiceImpl::new(config.clone(), client);

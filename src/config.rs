@@ -226,7 +226,8 @@ impl Config {
             api_version: env::var("IG_API_VERSION")
                 .ok()
                 .and_then(|v| v.parse::<u8>().ok())
-                .filter(|&v| v == 2 || v == 3),
+                .filter(|&v| v == 2 || v == 3)
+                .or(Some(3)), // Default to API v3 (OAuth) if not specified
         }
     }
 

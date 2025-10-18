@@ -138,8 +138,13 @@ impl IgHttpClientImpl {
 
     /// Adds common headers to all requests
     fn add_common_headers(&self, builder: RequestBuilder, version: &str) -> RequestBuilder {
+        let api_key = self.config.credentials.api_key.trim();
+        debug!("Adding X-IG-API-KEY header (length: {})", api_key.len());
+        if api_key.is_empty() {
+            error!("API key is empty!");
+        }
         builder
-            .header("X-IG-API-KEY", &self.config.credentials.api_key)
+            .header("X-IG-API-KEY", api_key)
             .header("Content-Type", "application/json; charset=UTF-8")
             .header("Accept", "application/json; charset=UTF-8")
             .header("Version", version)
@@ -205,7 +210,9 @@ impl IgHttpClientImpl {
                 }
             }
             StatusCode::UNAUTHORIZED => {
+                let body = response.text().await.unwrap_or_else(|_| "Unable to read response body".to_string());
                 error!("Unauthorized request to {}", url);
+                error!("Response body: {}", body);
                 Err(AppError::Unauthorized)
             }
             StatusCode::NOT_FOUND => {

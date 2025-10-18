@@ -524,13 +524,8 @@ impl IgAuthenticator for IgAuth<'_> {
         // Check if the account to switch to is the same as the current one
         if session.account_id == account_id {
             debug!("Already on account ID: {}. No need to switch.", account_id);
-            // Return a copy of the current session with the same rate limiter configuration
-            return Ok(IgSession::from_config(
-                session.cst.clone(),
-                session.token.clone(),
-                session.account_id.clone(),
-                self.cfg,
-            ));
+            // Return a clone of the current session to preserve all tokens including OAuth
+            return Ok(session.clone());
         }
 
         let url = self.rest_url("session");
