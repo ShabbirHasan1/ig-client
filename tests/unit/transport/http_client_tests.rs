@@ -34,6 +34,7 @@ fn create_test_config(base_url: &str) -> Arc<Config> {
             url: "postgres://user:pass@localhost/ig_db".to_string(),
             max_connections: 5,
         },
+        api_version: Some(2),
         sleep_hours: 1,
         page_size: 20,
         days_to_look_back: 7,

@@ -55,27 +55,44 @@ fn test_get_positions() {
                     "   Direction: {}, Size: {}",
                     position.position.direction, position.position.size
                 );
+                let current_level_display = match position.position.direction {
+                    ig_client::application::models::order::Direction::Buy => position
+                        .market
+                        .bid
+                        .map(|b| format!("{}", b))
+                        .unwrap_or_else(|| "N/A".to_string()),
+                    ig_client::application::models::order::Direction::Sell => position
+                        .market
+                        .offer
+                        .map(|o| format!("{}", o))
+                        .unwrap_or_else(|| "N/A".to_string()),
+                };
+
                 info!(
                     "   Open Level: {}, Current Level: {}",
-                    position.position.level, position.market.offer
+                    position.position.level, current_level_display
                 );
 
                 // Calculate profit/loss if possible
                 let open_level = position.position.level;
-                let current_level = match position.position.direction {
+                let current_level_opt = match position.position.direction {
                     ig_client::application::models::order::Direction::Buy => position.market.bid,
                     ig_client::application::models::order::Direction::Sell => position.market.offer,
                 };
 
-                let direction_multiplier = match position.position.direction {
-                    ig_client::application::models::order::Direction::Buy => 1.0,
-                    ig_client::application::models::order::Direction::Sell => -1.0,
-                };
+                if let Some(current_level) = current_level_opt {
+                    let direction_multiplier = match position.position.direction {
+                        ig_client::application::models::order::Direction::Buy => 1.0,
+                        ig_client::application::models::order::Direction::Sell => -1.0,
+                    };
 
-                let points = (current_level - open_level) * direction_multiplier;
-                let pnl = points * position.position.size;
+                    let points = (current_level - open_level) * direction_multiplier;
+                    let pnl = points * position.position.size;
 
-                info!("   Points: {:.2}, P/L: {:.2}", points, pnl);
+                    info!("   Points: {:.2}, P/L: {:.2}", points, pnl);
+                } else {
+                    info!("   P/L: N/A (no current price available)");
+                }
             }
         }
     });

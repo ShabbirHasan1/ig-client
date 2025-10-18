@@ -20,8 +20,8 @@ pub fn calculate_pnl(position: &Position) -> Option<f64> {
 
     // Get the appropriate price based on direction
     let current_price = match position.position.direction {
-        Direction::Buy => bid,
-        Direction::Sell => offer,
+        Direction::Buy => bid?,
+        Direction::Sell => offer?,
     };
 
     // Calculate price difference

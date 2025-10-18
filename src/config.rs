@@ -51,6 +51,8 @@ pub struct Config {
     pub rate_limit_type: RateLimitType,
     /// Safety margin for rate limiting (0.0-1.0)
     pub rate_limit_safety_margin: f64,
+    /// API version to use for authentication (2 or 3). If None, auto-detect based on available tokens
+    pub api_version: Option<u8>,
 }
 
 impl_json_display!(Config);
@@ -221,6 +223,11 @@ impl Config {
             days_to_look_back,
             rate_limit_type,
             rate_limit_safety_margin: safety_margin,
+            api_version: env::var("IG_API_VERSION")
+                .ok()
+                .and_then(|v| v.parse::<u8>().ok())
+                .filter(|&v| v == 2 || v == 3)
+                .or(Some(3)), // Default to API v3 (OAuth) if not specified
         }
     }
 
@@ -336,6 +343,7 @@ mod tests_display {
             days_to_look_back: 0,
             rate_limit_type: RateLimitType::NonTradingAccount,
             rate_limit_safety_margin: 0.8,
+            api_version: None,
         };
 
         let display_output = config.to_string();
@@ -364,7 +372,8 @@ mod tests_display {
             "page_size": 0,
             "days_to_look_back": 0,
             "rate_limit_type": "NonTradingAccount",
-            "rate_limit_safety_margin": 0.8
+            "rate_limit_safety_margin": 0.8,
+            "api_version": null
         });
 
         assert_json_eq!(

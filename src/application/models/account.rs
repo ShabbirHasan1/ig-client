@@ -422,9 +422,9 @@ pub struct PositionMarket {
     #[serde(rename = "lotSize")]
     pub lot_size: f64,
     /// Highest price of the current trading session
-    pub high: f64,
+    pub high: Option<f64>,
     /// Lowest price of the current trading session
-    pub low: f64,
+    pub low: Option<f64>,
     /// Percentage change in price since previous close
     #[serde(rename = "percentageChange")]
     pub percentage_change: f64,
@@ -432,9 +432,9 @@ pub struct PositionMarket {
     #[serde(rename = "netChange")]
     pub net_change: f64,
     /// Current bid price
-    pub bid: f64,
+    pub bid: Option<f64>,
     /// Current offer/ask price
-    pub offer: f64,
+    pub offer: Option<f64>,
     /// Time of the last price update
     #[serde(rename = "updateTime")]
     pub update_time: String,
@@ -559,9 +559,9 @@ pub struct MarketData {
     #[serde(rename = "lotSize")]
     pub lot_size: f64,
     /// Highest price of the current trading session
-    pub high: f64,
+    pub high: Option<f64>,
     /// Lowest price of the current trading session
-    pub low: f64,
+    pub low: Option<f64>,
     /// Percentage change in price since previous close
     #[serde(rename = "percentageChange")]
     pub percentage_change: f64,
@@ -569,9 +569,9 @@ pub struct MarketData {
     #[serde(rename = "netChange")]
     pub net_change: f64,
     /// Current bid price
-    pub bid: f64,
+    pub bid: Option<f64>,
     /// Current offer/ask price
-    pub offer: f64,
+    pub offer: Option<f64>,
     /// Time of the last price update
     #[serde(rename = "updateTime")]
     pub update_time: String,

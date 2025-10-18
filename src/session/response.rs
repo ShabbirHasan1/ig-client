@@ -41,3 +41,38 @@ pub struct AccountSwitchResponse {
     #[serde(rename = "trailingStopsEnabled")]
     pub trailing_stops_enabled: Option<bool>,
 }
+
+/// OAuth token information returned by API v3
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct OAuthToken {
+    /// OAuth access token
+    pub access_token: String,
+    /// OAuth refresh token
+    pub refresh_token: String,
+    /// Token scope
+    pub scope: String,
+    /// Token type (typically "Bearer")
+    pub token_type: String,
+    /// Token expiry time in seconds
+    pub expires_in: String,
+}
+
+/// Response structure for session API v3 calls
+#[derive(serde::Deserialize, Debug)]
+pub struct SessionV3Resp {
+    /// Client ID provided by the API
+    #[serde(rename = "clientId")]
+    pub client_id: String,
+    /// Account ID associated with the session
+    #[serde(rename = "accountId")]
+    pub account_id: String,
+    /// Timezone offset in hours
+    #[serde(rename = "timezoneOffset")]
+    pub timezone_offset: i32,
+    /// Lightstreamer endpoint for subscribing to account and price updates
+    #[serde(rename = "lightstreamerEndpoint")]
+    pub lightstreamer_endpoint: String,
+    /// OAuth token information
+    #[serde(rename = "oauthToken")]
+    pub oauth_token: OAuthToken,
+}

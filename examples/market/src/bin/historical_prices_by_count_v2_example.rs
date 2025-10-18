@@ -13,10 +13,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Create configuration
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::NonTradingAccount,
-        0.7,
-    ));
+    let mut config = Config::with_rate_limit_type(RateLimitType::NonTradingAccount, 0.7);
+    // Use API v3 (OAuth) by default
+    config.api_version = Some(3);
+    let config = Arc::new(config);
 
     info!("=== IG Client Historical Prices by Count Example (API v2) ===");
     info!("Configuration loaded:");

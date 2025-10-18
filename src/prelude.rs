@@ -94,8 +94,8 @@ pub use crate::transport::http_client::IgHttpClientImpl;
 /// Account information and balance data
 pub use crate::application::models::account::{
     Account, AccountActivity, AccountBalance, AccountInfo, ActivityAction, ActivityDetails,
-    ActivityType, MarketData as AccountMarketData, PageData, Positions, TransactionHistory,
-    TransactionMetadata, WorkingOrder, WorkingOrderData, WorkingOrders,
+    ActivityType, MarketData as AccountMarketData, PageData, Position, Positions,
+    TransactionHistory, TransactionMetadata, WorkingOrder, WorkingOrderData, WorkingOrders,
 };
 
 // ============================================================================
