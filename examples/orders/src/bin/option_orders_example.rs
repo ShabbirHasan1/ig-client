@@ -9,7 +9,6 @@
 //     transport::http_client::IgHttpClientImpl, utils::logger::setup_logger,
 // };
 use ig_client::prelude::*;
-use nanoid::nanoid;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
@@ -60,16 +59,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let size = 1.25; // Size of the order
     let currency_code = Some("EUR".to_string()); // Example currency code
-    let deal_reference = Some(nanoid!(30, &nanoid::alphabet::SAFE));
+    let deal_reference = get_id();
     info!("{:?}", deal_reference);
-    let id = get_id();
     let create_order = CreateOrderRequest::buy_option_to_market(
         epic.to_string(),
         size,
         expiry.clone(),
         deal_reference,
         currency_code.clone(),
-        id,
     );
 
     // Create a market service

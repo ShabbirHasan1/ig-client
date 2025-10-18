@@ -112,7 +112,6 @@ fn test_create_order_request_sell_option_to_market() {
         expiry.clone(),
         deal_reference.clone(),
         Some(currency_code.clone()),
-        None,
     );
 
     assert_eq!(order.epic, epic);
@@ -148,7 +147,6 @@ fn test_create_order_request_buy_option_to_market() {
         Some(expiry.to_string()),
         Some(deal_id.to_string()),
         Some(currency.to_string()),
-        None,
     );
 
     assert_eq!(request.epic, epic);
@@ -395,7 +393,6 @@ fn test_create_order_request_deserialization() {
 #[test]
 fn test_create_order_request_serialization() {
     let order = CreateOrderRequest {
-        deal_id: None,
         epic: "DO.D.OTCDSTXE.GG.IP".to_string(),
         direction: Direction::Sell,
         size: 5.25,

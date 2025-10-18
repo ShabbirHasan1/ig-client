@@ -98,9 +98,6 @@ pub enum TimeInForce {
 /// Model for creating a new order
 #[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct CreateOrderRequest {
-    /// Deal identifier for the order. Used for tracking purposes.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub deal_id: Option<String>,
     /// Instrument EPIC identifier
     pub epic: String,
     /// Order direction (buy or sell)
@@ -164,14 +161,13 @@ impl CreateOrderRequest {
         direction: Direction,
         size: f64,
         currency_code: Option<String>,
-        deal_id: Option<String>,
+        deal_reference: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
         let currency_code = currency_code.unwrap_or_else(|| "EUR".to_string());
 
         Self {
-            deal_id,
             epic,
             direction,
             size: rounded_size,
@@ -184,7 +180,7 @@ impl CreateOrderRequest {
             limit_level: None,
             limit_distance: None,
             expiry: Some("-".to_string()),
-            deal_reference: None,
+            deal_reference,
             force_open: true,
             currency_code,
             quote_id: None,
@@ -200,14 +196,13 @@ impl CreateOrderRequest {
         size: f64,
         level: f64,
         currency_code: Option<String>,
-        deal_id: Option<String>,
+        deal_reference: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
         let currency_code = currency_code.unwrap_or_else(|| "EUR".to_string());
 
         Self {
-            deal_id,
             epic,
             direction,
             size: rounded_size,
@@ -220,7 +215,7 @@ impl CreateOrderRequest {
             limit_level: None,
             limit_distance: None,
             expiry: None,
-            deal_reference: None,
+            deal_reference,
             force_open: true,
             currency_code,
             quote_id: None,
@@ -267,7 +262,6 @@ impl CreateOrderRequest {
         expiry: Option<String>,
         deal_reference: Option<String>,
         currency_code: Option<String>,
-        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
@@ -277,7 +271,6 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
-            deal_id,
             epic,
             direction: Direction::Sell,
             size: rounded_size,
@@ -337,7 +330,6 @@ impl CreateOrderRequest {
         expiry: Option<String>,
         deal_reference: Option<String>,
         currency_code: Option<String>,
-        deal_id: Option<String>,
         force_open: bool, // Compensate position if it is already open
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
@@ -348,7 +340,6 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
-            deal_id,
             epic,
             direction: Direction::Sell,
             size: rounded_size,
@@ -395,7 +386,6 @@ impl CreateOrderRequest {
         expiry: Option<String>,
         deal_reference: Option<String>,
         currency_code: Option<String>,
-        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
@@ -405,7 +395,6 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
-            deal_id,
             epic,
             direction: Direction::Buy,
             size: rounded_size,
@@ -461,7 +450,6 @@ impl CreateOrderRequest {
         deal_reference: Option<String>,
         currency_code: Option<String>,
         force_open: bool,
-        deal_id: Option<String>,
     ) -> Self {
         let rounded_size = (size * 100.0).floor() / 100.0;
 
@@ -471,7 +459,6 @@ impl CreateOrderRequest {
             deal_reference.or_else(|| Some(nanoid::nanoid!(30, &nanoid::alphabet::SAFE)));
 
         Self {
-            deal_id,
             epic,
             direction: Direction::Buy,
             size: rounded_size,
