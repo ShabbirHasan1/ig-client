@@ -38,6 +38,8 @@ pub struct Config {
     pub websocket: WebSocketConfig,
     /// Database configuration for data persistence
     pub database: DatabaseConfig,
+    /// Rate limiter configuration for API requests
+    pub rate_limiter: RateLimiterConfig,
     /// Number of hours between transaction fetching operations
     pub sleep_hours: u64,
     /// Number of items to retrieve per page in API requests
@@ -64,6 +66,17 @@ pub struct WebSocketConfig {
     pub url: String,
     /// Reconnect interval in seconds for WebSocket connections
     pub reconnect_interval: u64,
+}
+
+#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
+/// Configuration for rate limiting API requests
+pub struct RateLimiterConfig {
+    /// Maximum number of requests allowed per period
+    pub max_requests: u32,
+    /// Time period in seconds for the rate limit
+    pub period_seconds: u64,
+    /// Burst size - maximum number of requests that can be made at once
+    pub burst_size: u32,
 }
 
 /// Gets an environment variable or returns a default value if not found or cannot be parsed
@@ -189,6 +202,11 @@ impl Config {
                     String::from("postgres://postgres:postgres@localhost/ig"),
                 ),
                 max_connections: get_env_or_default("DATABASE_MAX_CONNECTIONS", 5),
+            },
+            rate_limiter: RateLimiterConfig {
+                max_requests: get_env_or_default("IG_RATE_LIMIT_MAX_REQUESTS", 60),
+                period_seconds: get_env_or_default("IG_RATE_LIMIT_PERIOD_SECONDS", 60),
+                burst_size: get_env_or_default("IG_RATE_LIMIT_BURST_SIZE", 10),
             },
             sleep_hours,
             page_size,

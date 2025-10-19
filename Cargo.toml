@@ -44,6 +44,7 @@ lazy_static = { workspace = true}
 rand = { workspace = true}
 nanoid = { workspace = true}
 pretty-simple-display = { workspace = true}
+governor = { workspace = true}
 
 [dev-dependencies]
 assert-json-diff = "2.0"

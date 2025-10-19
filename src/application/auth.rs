@@ -13,6 +13,7 @@
 //! - Automatic re-authentication when tokens expire
 
 use crate::application::config::Config;
+use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
 use crate::model::responses::{SessionResponse, SessionV3Response};
 use chrono::Utc;
@@ -121,10 +122,12 @@ impl Session {
 /// - Automatic OAuth token refresh
 /// - Account switching
 /// - Session management
+/// - Rate limiting for API requests
 pub struct Auth {
     config: Arc<Config>,
     client: Client,
     session: Arc<RwLock<Option<Session>>>,
+    rate_limiter: RateLimiter,
 }
 
 impl Auth {
@@ -138,10 +141,13 @@ impl Auth {
             .build()
             .expect("Failed to create HTTP client");
 
+        let rate_limiter = RateLimiter::new(&config.rate_limiter);
+
         Self {
             config,
             client,
             session: Arc::new(RwLock::new(None)),
+            rate_limiter,
         }
     }
 
@@ -200,6 +206,9 @@ impl Auth {
 
     /// Performs login using API v2 (CST/X-SECURITY-TOKEN)
     async fn login_v2(&self) -> Result<Session, AppError> {
+        // Wait for rate limiter
+        self.rate_limiter.wait().await;
+
         let url = format!("{}/session", self.config.rest_api.base_url);
 
         let body = serde_json::json!({
@@ -252,6 +261,9 @@ impl Auth {
 
     /// Performs login using API v3 (OAuth)
     async fn login_oauth(&self) -> Result<Session, AppError> {
+        // Wait for rate limiter
+        self.rate_limiter.wait().await;
+
         let url = format!("{}/session", self.config.rest_api.base_url);
 
         let body = serde_json::json!({
@@ -332,6 +344,9 @@ impl Auth {
         };
 
         info!("Refreshing OAuth token");
+
+        // Wait for rate limiter
+        self.rate_limiter.wait().await;
 
         let url = format!("{}/session/refresh-token", self.config.rest_api.base_url);
 
@@ -423,6 +438,9 @@ impl Auth {
         }
 
         info!("Switching to account: {}", account_id);
+
+        // Wait for rate limiter
+        self.rate_limiter.wait().await;
 
         let url = format!("{}/session", self.config.rest_api.base_url);
 
