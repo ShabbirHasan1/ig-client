@@ -500,9 +500,6 @@
 //!
 //! Please make sure your code passes all tests and linting checks before submitting a pull request.
 
-/// Configuration for the IG Markets API client
-pub mod config;
-
 /// Core application logic and services
 pub mod application;
 
@@ -518,8 +515,6 @@ pub mod error;
 /// Data persistence and storage
 pub mod storage;
 
-pub mod auth;
-pub mod client;
 pub mod model;
 pub mod prelude;
 /// Utility functions and helpers

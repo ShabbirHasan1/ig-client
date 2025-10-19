@@ -23,14 +23,14 @@
 //! let accounts = client.get("/accounts").await?;
 //! ```
 
-use crate::auth::{Auth, Session};
-use crate::config::Config;
 use crate::error::AppError;
 use reqwest::{Client as HttpClient, Method, RequestBuilder, Response, StatusCode};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tracing::{debug, error, warn};
+use crate::application::auth::{Auth, Session};
+use crate::application::config::Config;
 
 const USER_AGENT: &str = "ig-client/0.5.2";
 

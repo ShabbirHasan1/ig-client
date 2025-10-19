@@ -12,7 +12,6 @@
 //! - Account switching
 //! - Automatic re-authentication when tokens expire
 
-use crate::config::Config;
 use crate::error::AppError;
 use crate::model::responses::{SessionResponse, SessionV3Response};
 use chrono::Utc;
@@ -21,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
+use crate::application::config::Config;
 
 const USER_AGENT: &str = "ig-client/0.5.2";
 

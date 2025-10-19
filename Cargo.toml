@@ -68,8 +68,8 @@ name = "benchmarks"
 harness = false
 path = "benches/benchmarks.rs"
 
-#[workspace]
-#members = [
+[workspace]
+members = [
 #    "examples/account",
 #    "examples/chart",
 #    "examples/market",
@@ -80,7 +80,8 @@ path = "benches/benchmarks.rs"
 #    "examples/prices",
 #    "examples/rate_limiter",
 #    "examples/other",
-#]
+    "examples/simples",
+]
 
 [workspace.dependencies]
 ig-client=  { path = "." }

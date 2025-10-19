@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
+use crate::presentation::instrument::InstrumentType;
 
 /// Model for a market instrument with enhanced deserialization
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -590,10 +591,7 @@ pub struct MarketFields {
     pub update_time: Option<String>,
 }
 
-use crate::presentation::instrument::InstrumentType;
-use once_cell::sync::Lazy;
-use std::sync::Arc;
-use tokio::sync::Semaphore;
+
 
 
 
