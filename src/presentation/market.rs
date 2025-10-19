@@ -1,14 +1,380 @@
-use crate::application::models::market::{MarketNavigationResponse, MarketNode};
-use crate::application::services::MarketService;
-use crate::error::AppError;
 use crate::presentation::serialization::{string_as_bool_opt, string_as_float_opt};
-use crate::session::interface::IgSession;
 use lightstreamer_rs::subscription::ItemUpdate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
-use std::pin::Pin;
-use tracing::{debug, error, info};
+use std::fmt::Display;
+
+/// Model for a market instrument with enhanced deserialization
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Instrument {
+    /// Unique identifier for the instrument
+    pub epic: String,
+    /// Human-readable name of the instrument
+    pub name: String,
+    /// Expiry date of the instrument
+    pub expiry: String,
+    /// Size of one contract
+    #[serde(rename = "contractSize")]
+    pub contract_size: String,
+    /// Size of one lot
+    #[serde(rename = "lotSize")]
+    pub lot_size: Option<f64>,
+    /// Upper price limit for the instrument
+    #[serde(rename = "highLimitPrice")]
+    pub high_limit_price: Option<f64>,
+    /// Lower price limit for the instrument
+    #[serde(rename = "lowLimitPrice")]
+    pub low_limit_price: Option<f64>,
+    /// Margin factor for the instrument
+    #[serde(rename = "marginFactor")]
+    pub margin_factor: Option<f64>,
+    /// Unit for the margin factor
+    #[serde(rename = "marginFactorUnit")]
+    pub margin_factor_unit: Option<String>,
+    /// Available currencies for trading this instrument
+    pub currencies: Option<Vec<Currency>>,
+    #[serde(rename = "valueOfOnePip")]
+    /// Value of one pip for this instrument
+    pub value_of_one_pip: String,
+    /// Type of the instrument
+    #[serde(rename = "instrumentType")]
+    pub instrument_type: Option<InstrumentType>,
+    /// Expiry details including last dealing date
+    #[serde(rename = "expiryDetails")]
+    pub expiry_details: Option<ExpiryDetails>,
+    #[serde(rename = "slippageFactor")]
+    /// Slippage factor for the instrument
+    pub slippage_factor: Option<StepDistance>,
+    #[serde(rename = "limitedRiskPremium")]
+    /// Premium for limited risk trades
+    pub limited_risk_premium: Option<StepDistance>,
+    #[serde(rename = "newsCode")]
+    /// Code used for news related to this instrument
+    pub news_code: Option<String>,
+    #[serde(rename = "chartCode")]
+    /// Code used for charting this instrument
+    pub chart_code: Option<String>,
+}
+
+/// Model for an instrument's currency
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Currency {
+    /// Currency code (e.g., "USD", "EUR")
+    pub code: String,
+    /// Currency symbol (e.g., "$", "€")
+    pub symbol: Option<String>,
+    /// Base exchange rate for the currency
+    #[serde(rename = "baseExchangeRate")]
+    pub base_exchange_rate: Option<f64>,
+    /// Current exchange rate
+    #[serde(rename = "exchangeRate")]
+    pub exchange_rate: Option<f64>,
+    /// Whether this is the default currency for the instrument
+    #[serde(rename = "isDefault")]
+    pub is_default: Option<bool>,
+}
+
+/// Model for market data with enhanced deserialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketDetails {
+    /// Detailed information about the instrument
+    pub instrument: Instrument,
+    /// Current market snapshot with prices
+    pub snapshot: MarketSnapshot,
+    /// Trading rules for the market
+    #[serde(rename = "dealingRules")]
+    pub dealing_rules: DealingRules,
+}
+
+/// Trading rules for a market with enhanced deserialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DealingRules {
+    /// Minimum step distance
+    #[serde(rename = "minStepDistance")]
+    pub min_step_distance: StepDistance,
+
+    /// Minimum deal size allowed
+    #[serde(rename = "minDealSize")]
+    pub min_deal_size: StepDistance,
+
+    /// Minimum distance for controlled risk stop
+    #[serde(rename = "minControlledRiskStopDistance")]
+    pub min_controlled_risk_stop_distance: StepDistance,
+
+    /// Minimum distance for normal stop or limit orders
+    #[serde(rename = "minNormalStopOrLimitDistance")]
+    pub min_normal_stop_or_limit_distance: StepDistance,
+
+    /// Maximum distance for stop or limit orders
+    #[serde(rename = "maxStopOrLimitDistance")]
+    pub max_stop_or_limit_distance: StepDistance,
+
+    /// Controlled risk spacing
+    #[serde(rename = "controlledRiskSpacing")]
+    pub controlled_risk_spacing: StepDistance,
+
+    /// Market order preference setting
+    #[serde(rename = "marketOrderPreference")]
+    pub market_order_preference: String,
+
+    /// Trailing stops preference setting
+    #[serde(rename = "trailingStopsPreference")]
+    pub trailing_stops_preference: String,
+
+    #[serde(rename = "maxDealSize")]
+    /// Maximum deal size allowed
+    pub max_deal_size: Option<f64>,
+}
+
+/// Market snapshot with enhanced deserialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketSnapshot {
+    /// Current status of the market (e.g., "OPEN", "CLOSED")
+    #[serde(rename = "marketStatus")]
+    pub market_status: String,
+
+    /// Net change in price since previous close
+    #[serde(rename = "netChange")]
+    pub net_change: Option<f64>,
+
+    /// Percentage change in price since previous close
+    #[serde(rename = "percentageChange")]
+    pub percentage_change: Option<f64>,
+
+    /// Time of the last price update
+    #[serde(rename = "updateTime")]
+    pub update_time: Option<String>,
+
+    /// Delay time in milliseconds for market data
+    #[serde(rename = "delayTime")]
+    pub delay_time: Option<i64>,
+
+    /// Current bid price
+    pub bid: Option<f64>,
+
+    /// Current offer/ask price
+    pub offer: Option<f64>,
+
+    /// Highest price of the current trading session
+    pub high: Option<f64>,
+
+    /// Lowest price of the current trading session
+    pub low: Option<f64>,
+
+    /// Odds for binary markets
+    #[serde(rename = "binaryOdds")]
+    pub binary_odds: Option<f64>,
+
+    /// Factor for decimal places in price display
+    #[serde(rename = "decimalPlacesFactor")]
+    pub decimal_places_factor: Option<i64>,
+
+    /// Factor for scaling prices
+    #[serde(rename = "scalingFactor")]
+    pub scaling_factor: Option<i64>,
+
+    /// Extra spread for controlled risk trades
+    #[serde(rename = "controlledRiskExtraSpread")]
+    pub controlled_risk_extra_spread: Option<f64>,
+}
+
+/// Model for market search results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketSearchResult {
+    /// List of markets matching the search criteria
+    pub markets: Vec<MarketData>,
+}
+
+/// Basic market data
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MarketData {
+    /// Unique identifier for the market
+    pub epic: String,
+    /// Human-readable name of the instrument
+    #[serde(rename = "instrumentName")]
+    pub instrument_name: String,
+    /// Type of the instrument
+    #[serde(rename = "instrumentType")]
+    pub instrument_type: InstrumentType,
+    /// Expiry date of the instrument
+    pub expiry: String,
+    /// Upper price limit for the market
+    #[serde(rename = "highLimitPrice")]
+    pub high_limit_price: Option<f64>,
+    /// Lower price limit for the market
+    #[serde(rename = "lowLimitPrice")]
+    pub low_limit_price: Option<f64>,
+    /// Current status of the market
+    #[serde(rename = "marketStatus")]
+    pub market_status: String,
+    /// Net change in price since previous close
+    #[serde(rename = "netChange")]
+    pub net_change: Option<f64>,
+    /// Percentage change in price since previous close
+    #[serde(rename = "percentageChange")]
+    pub percentage_change: Option<f64>,
+    /// Time of the last price update
+    #[serde(rename = "updateTime")]
+    pub update_time: Option<String>,
+    /// Time of the last price update in UTC
+    #[serde(rename = "updateTimeUTC")]
+    pub update_time_utc: Option<String>,
+    /// Current bid price
+    pub bid: Option<f64>,
+    /// Current offer/ask price
+    pub offer: Option<f64>,
+}
+
+impl Display for MarketData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let json = serde_json::to_string(self).unwrap_or_else(|_| "Invalid JSON".to_string());
+        write!(f, "{json}")
+    }
+}
+
+/// Model for historical prices
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricalPricesResponse {
+    /// List of historical price points
+    pub prices: Vec<HistoricalPrice>,
+    /// Type of the instrument
+    #[serde(rename = "instrumentType")]
+    pub instrument_type: InstrumentType,
+    /// API usage allowance information
+    #[serde(rename = "allowance", skip_serializing_if = "Option::is_none", default)]
+    pub allowance: Option<PriceAllowance>,
+}
+
+/// Historical price data point
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricalPrice {
+    /// Timestamp of the price data point
+    #[serde(rename = "snapshotTime")]
+    pub snapshot_time: String,
+    /// Opening price for the period
+    #[serde(rename = "openPrice")]
+    pub open_price: PricePoint,
+    /// Highest price for the period
+    #[serde(rename = "highPrice")]
+    pub high_price: PricePoint,
+    /// Lowest price for the period
+    #[serde(rename = "lowPrice")]
+    pub low_price: PricePoint,
+    /// Closing price for the period
+    #[serde(rename = "closePrice")]
+    pub close_price: PricePoint,
+    /// Volume traded during the period
+    #[serde(rename = "lastTradedVolume")]
+    pub last_traded_volume: Option<i64>,
+}
+
+/// Price point with bid, ask and last traded prices
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PricePoint {
+    /// Bid price at this point
+    pub bid: Option<f64>,
+    /// Ask/offer price at this point
+    pub ask: Option<f64>,
+    /// Last traded price at this point
+    #[serde(rename = "lastTraded")]
+    pub last_traded: Option<f64>,
+}
+
+/// Information about API usage allowance for price data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriceAllowance {
+    /// Remaining API calls allowed in the current period
+    #[serde(rename = "remainingAllowance")]
+    pub remaining_allowance: i64,
+    /// Total API calls allowed per period
+    #[serde(rename = "totalAllowance")]
+    pub total_allowance: i64,
+    /// Time until the allowance resets
+    #[serde(rename = "allowanceExpiry")]
+    pub allowance_expiry: i64,
+}
+
+/// Response model for market navigation
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MarketNavigationResponse {
+    /// List of navigation nodes at the current level
+    #[serde(default, deserialize_with = "deserialize_null_as_empty_vec")]
+    pub nodes: Vec<MarketNavigationNode>,
+    /// List of markets at the current level
+    #[serde(default, deserialize_with = "deserialize_null_as_empty_vec")]
+    pub markets: Vec<MarketData>,
+}
+
+/// Details about instrument expiry
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ExpiryDetails {
+    /// The last dealing date and time for the instrument
+    #[serde(rename = "lastDealingDate")]
+    pub last_dealing_date: String,
+
+    /// Information about settlement
+    #[serde(rename = "settlementInfo")]
+    pub settlement_info: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Unit for step distances in trading rules
+pub enum StepUnit {
+    #[serde(rename = "POINTS")]
+    /// Points (price movement units)
+    Points,
+    #[serde(rename = "PERCENTAGE")]
+    /// Percentage value
+    Percentage,
+    #[serde(rename = "pct")]
+    /// Alternative representation for percentage
+    Pct,
+}
+
+/// A struct to handle the minStepDistance value which can be a complex object
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StepDistance {
+    /// Unit type for the distance
+    pub unit: Option<StepUnit>,
+    /// Numeric value of the distance
+    pub value: Option<f64>,
+}
+
+/// Helper function to deserialize null values as empty vectors
+#[allow(dead_code)]
+fn deserialize_null_as_empty_vec<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    let opt = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
+
+/// Node in the market navigation hierarchy
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MarketNavigationNode {
+    /// Unique identifier for the node
+    pub id: String,
+    /// Display name of the node
+    pub name: String,
+}
+
+/// Structure representing a node in the market hierarchy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketNode {
+    /// Node ID
+    pub id: String,
+    /// Node name
+    pub name: String,
+    /// Child nodes
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub children: Vec<MarketNode>,
+    /// Markets in this node
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub markets: Vec<MarketData>,
+}
 
 /// Represents the current state of a market
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
@@ -224,155 +590,149 @@ pub struct MarketFields {
     pub update_time: Option<String>,
 }
 
+use crate::presentation::instrument::InstrumentType;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-// Global semaphore to limit concurrency in API requests
-// This ensures that rate limits are not exceeded
-static API_SEMAPHORE: Lazy<Arc<Semaphore>> = Lazy::new(|| Arc::new(Semaphore::new(1)));
 
-/// Function to recursively build the market hierarchy with rate limiting
-///
-/// This function builds the market hierarchy recursively, respecting
-/// the API rate limits. It uses a semaphore to ensure that only
-/// one request is made at a time, thus avoiding exceeding rate limits.
-pub fn build_market_hierarchy<'a>(
-    market_service: &'a impl MarketService,
-    session: &'a IgSession,
-    node_id: Option<&'a str>,
-    depth: usize,
-) -> Pin<Box<dyn Future<Output = Result<Vec<MarketNode>, AppError>> + 'a>> {
-    Box::pin(async move {
-        // Limit the depth to avoid infinite loops
-        if depth > 7 {
-            debug!("Reached maximum depth of 5, stopping recursion");
-            return Ok(Vec::new());
-        }
 
-        // Acquire the semaphore to limit concurrency
-        // This ensures that only one API request is made at a time
-        let _permit = API_SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        // The rate limiter will handle any necessary delays between requests
-        // No explicit sleep calls are needed here
-
-        // Get the nodes and markets at the current level
-        let navigation: MarketNavigationResponse = match node_id {
-            Some(id) => {
-                debug!("Getting navigation node: {}", id);
-                match market_service.get_market_navigation_node(session, id).await {
-                    Ok(response) => {
-                        debug!(
-                            "Response received for node {}: {} nodes, {} markets",
-                            id,
-                            response.nodes.len(),
-                            response.markets.len()
-                        );
-                        response
-                    }
-                    Err(e) => {
-                        error!("Error getting node {}: {:?}", id, e);
-                        // If we hit a rate limit, return empty results instead of failing
-                        if matches!(e, AppError::RateLimitExceeded | AppError::Unexpected(_)) {
-                            info!("Rate limit or API error encountered, returning partial results");
-                            return Ok(Vec::new());
-                        }
-                        return Err(e);
-                    }
-                }
-            }
-            None => {
-                debug!("Getting top-level navigation nodes");
-                match market_service.get_market_navigation(session).await {
-                    Ok(response) => {
-                        debug!(
-                            "Response received for top-level nodes: {} nodes, {} markets",
-                            response.nodes.len(),
-                            response.markets.len()
-                        );
-                        response
-                    }
-                    Err(e) => {
-                        error!("Error getting top-level nodes: {:?}", e);
-                        return Err(e);
-                    }
-                }
-            }
-        };
-
-        let mut nodes = Vec::new();
-
-        // Process all nodes at this level
-        let nodes_to_process = navigation.nodes;
-
-        // Release the semaphore before processing child nodes
-        // This allows other requests to be processed while we wait
-        // for recursive requests to complete
-        drop(_permit);
-
-        // Process nodes sequentially with rate limiting
-        // This is important to respect the API rate limits
-        // By processing nodes sequentially, we allow the rate limiter
-        // to properly control the flow of requests
-        for node in nodes_to_process.into_iter() {
-            // Recursively get the children of this node
-            match build_market_hierarchy(market_service, session, Some(&node.id), depth + 1).await {
-                Ok(children) => {
-                    info!("Adding node {} with {} children", node.name, children.len());
-                    nodes.push(MarketNode {
-                        id: node.id.clone(),
-                        name: node.name.clone(),
-                        children,
-                        markets: Vec::new(),
-                    });
-                }
-                Err(e) => {
-                    error!("Error building hierarchy for node {}: {:?}", node.id, e);
-                    // Continuar con otros nodos incluso si uno falla
-                    if depth < 7 {
-                        nodes.push(MarketNode {
-                            id: node.id.clone(),
-                            name: format!("{} (error: {})", node.name, e),
-                            children: Vec::new(),
-                            markets: Vec::new(),
-                        });
-                    }
-                }
-            }
-        }
-
-        // Process all markets in this node
-        let markets_to_process = navigation.markets;
-        for market in markets_to_process {
-            debug!("Adding market: {}", market.instrument_name);
-            nodes.push(MarketNode {
-                id: market.epic.clone(),
-                name: market.instrument_name.clone(),
-                children: Vec::new(),
-                markets: vec![market],
-            });
-        }
-
-        Ok(nodes)
-    })
-}
-
-/// Recursively extract all markets from the hierarchy into a flat list
-pub fn extract_markets_from_hierarchy(
-    nodes: &[MarketNode],
-) -> Vec<crate::application::models::market::MarketData> {
-    let mut all_markets = Vec::new();
-
-    for node in nodes {
-        // Add markets from this node
-        all_markets.extend(node.markets.clone());
-
-        // Recursively add markets from child nodes
-        if !node.children.is_empty() {
-            all_markets.extend(extract_markets_from_hierarchy(&node.children));
-        }
-    }
-
-    all_markets
-}
+// pub fn build_market_hierarchy<'a>(
+//     market_service: &'a impl MarketService,
+//     session: &'a IgSession,
+//     node_id: Option<&'a str>,
+//     depth: usize,
+// ) -> Pin<Box<dyn Future<Output = Result<Vec<MarketNode>, AppError>> + 'a>> {
+//     Box::pin(async move {
+//         // Limit the depth to avoid infinite loops
+//         if depth > 7 {
+//             debug!("Reached maximum depth of 5, stopping recursion");
+//             return Ok(Vec::new());
+//         }
+//
+//         // Acquire the semaphore to limit concurrency
+//         // This ensures that only one API request is made at a time
+//         let _permit = API_SEMAPHORE.clone().acquire_owned().await.unwrap();
+//
+//         // The rate limiter will handle any necessary delays between requests
+//         // No explicit sleep calls are needed here
+//
+//         // Get the nodes and markets at the current level
+//         let navigation: MarketNavigationResponse = match node_id {
+//             Some(id) => {
+//                 debug!("Getting navigation node: {}", id);
+//                 match market_service.get_market_navigation_node(session, id).await {
+//                     Ok(response) => {
+//                         debug!(
+//                             "Response received for node {}: {} nodes, {} markets",
+//                             id,
+//                             response.nodes.len(),
+//                             response.markets.len()
+//                         );
+//                         response
+//                     }
+//                     Err(e) => {
+//                         error!("Error getting node {}: {:?}", id, e);
+//                         // If we hit a rate limit, return empty results instead of failing
+//                         if matches!(e, AppError::RateLimitExceeded | AppError::Unexpected(_)) {
+//                             info!("Rate limit or API error encountered, returning partial results");
+//                             return Ok(Vec::new());
+//                         }
+//                         return Err(e);
+//                     }
+//                 }
+//             }
+//             None => {
+//                 debug!("Getting top-level navigation nodes");
+//                 match market_service.get_market_navigation(session).await {
+//                     Ok(response) => {
+//                         debug!(
+//                             "Response received for top-level nodes: {} nodes, {} markets",
+//                             response.nodes.len(),
+//                             response.markets.len()
+//                         );
+//                         response
+//                     }
+//                     Err(e) => {
+//                         error!("Error getting top-level nodes: {:?}", e);
+//                         return Err(e);
+//                     }
+//                 }
+//             }
+//         };
+//
+//         let mut nodes = Vec::new();
+//
+//         // Process all nodes at this level
+//         let nodes_to_process = navigation.nodes;
+//
+//         // Release the semaphore before processing child nodes
+//         // This allows other requests to be processed while we wait
+//         // for recursive requests to complete
+//         drop(_permit);
+//
+//         // Process nodes sequentially with rate limiting
+//         // This is important to respect the API rate limits
+//         // By processing nodes sequentially, we allow the rate limiter
+//         // to properly control the flow of requests
+//         for node in nodes_to_process.into_iter() {
+//             // Recursively get the children of this node
+//             match build_market_hierarchy(market_service, session, Some(&node.id), depth + 1).await {
+//                 Ok(children) => {
+//                     info!("Adding node {} with {} children", node.name, children.len());
+//                     nodes.push(MarketNode {
+//                         id: node.id.clone(),
+//                         name: node.name.clone(),
+//                         children,
+//                         markets: Vec::new(),
+//                     });
+//                 }
+//                 Err(e) => {
+//                     error!("Error building hierarchy for node {}: {:?}", node.id, e);
+//                     // Continuar con otros nodos incluso si uno falla
+//                     if depth < 7 {
+//                         nodes.push(MarketNode {
+//                             id: node.id.clone(),
+//                             name: format!("{} (error: {})", node.name, e),
+//                             children: Vec::new(),
+//                             markets: Vec::new(),
+//                         });
+//                     }
+//                 }
+//             }
+//         }
+//
+//         // Process all markets in this node
+//         let markets_to_process = navigation.markets;
+//         for market in markets_to_process {
+//             debug!("Adding market: {}", market.instrument_name);
+//             nodes.push(MarketNode {
+//                 id: market.epic.clone(),
+//                 name: market.instrument_name.clone(),
+//                 children: Vec::new(),
+//                 markets: vec![market],
+//             });
+//         }
+//
+//         Ok(nodes)
+//     })
+// }
+//
+// /// Recursively extract all markets from the hierarchy into a flat list
+// pub fn extract_markets_from_hierarchy(
+//     nodes: &[MarketNode],
+// ) -> Vec<crate::application::models::market::MarketData> {
+//     let mut all_markets = Vec::new();
+//
+//     for node in nodes {
+//         // Add markets from this node
+//         all_markets.extend(node.markets.clone());
+//
+//         // Recursively add markets from child nodes
+//         if !node.children.is_empty() {
+//             all_markets.extend(extract_markets_from_hierarchy(&node.children));
+//         }
+//     }
+//
+//     all_markets
+// }

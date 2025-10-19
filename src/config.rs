@@ -96,8 +96,6 @@ impl Default for Config {
 }
 
 impl Config {
-
-
     /// Creates a new configuration instance with a specific rate limit type
     ///
     /// # Arguments
@@ -162,7 +160,6 @@ impl Config {
             }
         );
 
-        
         Config {
             credentials: Credentials {
                 username,
@@ -216,4 +213,3 @@ impl Config {
             .await
     }
 }
-

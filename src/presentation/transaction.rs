@@ -1,4 +1,4 @@
-use crate::application::models::account::AccountTransaction;
+use crate::presentation::account::AccountTransaction;
 use crate::utils::parsing::{ParsedOptionInfo, parse_instrument_name};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Utc, Weekday};
 use pretty_simple_display::DisplaySimple;

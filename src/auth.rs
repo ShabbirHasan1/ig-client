@@ -14,7 +14,7 @@
 
 use crate::config::Config;
 use crate::error::AppError;
-use crate::session::response::{SessionResp, SessionV3Resp};
+use crate::model::responses::{SessionResponse, SessionV3Response};
 use chrono::Utc;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -237,7 +237,7 @@ impl Auth {
             return Err(AppError::Unauthorized);
         }
 
-        let json: SessionResp = response.json().await?;
+        let json: SessionResponse = response.json().await?;
 
         Ok(Session {
             account_id: json.account_id,
@@ -279,7 +279,7 @@ impl Auth {
             return Err(AppError::Unauthorized);
         }
 
-        let json: SessionV3Resp = response.json().await?;
+        let json: SessionV3Response = response.json().await?;
 
         debug!(
             "OAuth token expires in {} seconds",

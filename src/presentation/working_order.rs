@@ -1,4 +1,4 @@
-use crate::application::models::order::{Direction, OrderType, TimeInForce};
+use crate::presentation::order::{Direction, OrderType, TimeInForce};
 use serde::{Deserialize, Serialize};
 
 /// Model for creating a new working order

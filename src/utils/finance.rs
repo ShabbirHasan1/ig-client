@@ -2,8 +2,8 @@
 //
 // Financial calculation utilities for the IG client
 
-use crate::application::models::account::Position;
-use crate::application::models::order::Direction;
+use crate::presentation::account::Position;
+use crate::presentation::order::Direction;
 
 /// Calculate the Profit and Loss (P&L) for a position based on current market prices
 ///

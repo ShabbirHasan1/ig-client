@@ -101,7 +101,7 @@ pub struct StorageStats {
 pub async fn store_historical_prices(
     pool: &PgPool,
     epic: &str,
-    prices: &[crate::application::models::market::HistoricalPrice],
+    prices: &[HistoricalPrice],
 ) -> Result<StorageStats, sqlx::Error> {
     let mut stats = StorageStats::default();
     let mut tx = pool.begin().await?;
