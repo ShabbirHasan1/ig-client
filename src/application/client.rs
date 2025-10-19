@@ -23,16 +23,16 @@
 //! let accounts = client.get("/accounts").await?;
 //! ```
 
+use crate::application::auth::{Auth, Session};
+use crate::application::config::Config;
 use crate::error::AppError;
 use reqwest::{Client as HttpClient, Method, RequestBuilder, Response, StatusCode};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tracing::{debug, error, warn};
-use crate::application::auth::{Auth, Session};
-use crate::application::config::Config;
 
-const USER_AGENT: &str = "ig-client/0.5.2";
+const USER_AGENT: &str = "ig-client/0.6.0";
 
 /// Simplified client for IG Markets API with automatic authentication
 ///

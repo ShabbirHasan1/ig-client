@@ -515,7 +515,9 @@ pub mod error;
 /// Data persistence and storage
 pub mod storage;
 
+/// Data models for IG Markets API entities
 pub mod model;
+/// Prelude module for convenient imports
 pub mod prelude;
 /// Utility functions and helpers
 pub mod utils;

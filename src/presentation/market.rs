@@ -1,10 +1,10 @@
+use crate::presentation::instrument::InstrumentType;
 use crate::presentation::serialization::{string_as_bool_opt, string_as_float_opt};
 use lightstreamer_rs::subscription::ItemUpdate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
-use crate::presentation::instrument::InstrumentType;
 
 /// Model for a market instrument with enhanced deserialization
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -590,10 +590,6 @@ pub struct MarketFields {
     #[serde(default)]
     pub update_time: Option<String>,
 }
-
-
-
-
 
 // pub fn build_market_hierarchy<'a>(
 //     market_service: &'a impl MarketService,

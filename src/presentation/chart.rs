@@ -4,19 +4,25 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
+/// Time scale for chart data aggregation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum ChartScale {
+    /// Second-level aggregation
     #[serde(rename = "SECOND")]
     Second,
+    /// One-minute aggregation
     #[serde(rename = "1MINUTE")]
     OneMinute,
+    /// Five-minute aggregation
     #[serde(rename = "5MINUTE")]
     FiveMinute,
+    /// Hourly aggregation
     #[serde(rename = "HOUR")]
     Hour,
+    /// Tick-by-tick data (no aggregation)
     #[serde(rename = "TICK")]
     #[default]
-    Tick, // For the case CHART:{epic}:TICK
+    Tick,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -32,6 +38,7 @@ pub struct ChartData {
     is_snapshot: bool,
 }
 
+/// Chart field data containing price, volume, and timestamp information
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ChartFields {
     // Common fields for both chart types

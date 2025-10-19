@@ -4,25 +4,35 @@ use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Market dealing status flags indicating trading availability
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum DealingFlag {
+    /// Market is closed for trading
     #[serde(rename = "CLOSED")]
     #[default]
     Closed,
+    /// Market is in call phase
     #[serde(rename = "CALL")]
     Call,
+    /// Market is open for dealing
     #[serde(rename = "DEAL")]
     Deal,
+    /// Market is open for editing orders
     #[serde(rename = "EDIT")]
     Edit,
+    /// Market is open for closing positions only
     #[serde(rename = "CLOSINGONLY")]
     ClosingOnly,
+    /// Market is open for dealing but not editing
     #[serde(rename = "DEALNOEDIT")]
     DealNoEdit,
+    /// Market is in auction phase
     #[serde(rename = "AUCTION")]
     Auction,
+    /// Market is in auction phase without editing
     #[serde(rename = "AUCTIONNOEDIT")]
     AuctionNoEdit,
+    /// Market trading is suspended
     #[serde(rename = "SUSPEND")]
     Suspend,
 }
@@ -43,6 +53,7 @@ pub struct PriceData {
     pub is_snapshot: bool,
 }
 
+/// Price field data containing bid, offer, and market status information
 #[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize, Default)]
 pub struct PriceFields {
     #[serde(rename = "MID_OPEN")]
