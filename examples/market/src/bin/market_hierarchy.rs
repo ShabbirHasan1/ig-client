@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Load configuration from environment variables
     let config = Arc::new(Config::with_rate_limit_type(
         RateLimitType::NonTradingAccount,
-        0.7,
+        0.3,
     ));
 
     // Create HTTP client

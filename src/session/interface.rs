@@ -267,6 +267,22 @@ impl IgSession {
         !self.cst.is_empty() && !self.token.is_empty() && self.oauth_token.is_none()
     }
 
+    /// Checks if the OAuth token needs to be refreshed
+    ///
+    /// # Arguments
+    /// * `margin_seconds` - Safety margin in seconds before actual expiry (default: 300 = 5 minutes)
+    ///
+    /// # Returns
+    /// `true` if the OAuth token is expired or will expire within the margin, `false` otherwise
+    /// Returns `false` if this is not an OAuth session
+    pub fn needs_token_refresh(&self, margin_seconds: Option<i64>) -> bool {
+        if let Some(oauth_token) = &self.oauth_token {
+            oauth_token.is_expired(margin_seconds.unwrap_or(300))
+        } else {
+            false
+        }
+    }
+
     /// Creates a new session with OAuth authentication (API v3)
     ///
     /// # Arguments

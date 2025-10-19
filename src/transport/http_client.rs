@@ -119,6 +119,7 @@ impl IgHttpClientImpl {
     fn is_retryable_error(&self, error: &AppError) -> bool {
         match error {
             AppError::RateLimitExceeded => true,
+            AppError::OAuthTokenExpired => true,
             AppError::Network(e) => {
                 // Retry on connection errors, timeouts, and server errors
                 e.is_timeout() || e.is_connect() || e.status().is_some_and(|s| s.is_server_error())
@@ -216,7 +217,14 @@ impl IgHttpClientImpl {
                     .unwrap_or_else(|_| "Unable to read response body".to_string());
                 error!("Unauthorized request to {}", url);
                 error!("Response body: {}", body);
-                Err(AppError::Unauthorized)
+
+                // Check if this is an OAuth token expiration error
+                if body.contains("error.security.oauth-token-invalid") {
+                    debug!("Detected expired OAuth token");
+                    Err(AppError::OAuthTokenExpired)
+                } else {
+                    Err(AppError::Unauthorized)
+                }
             }
             StatusCode::NOT_FOUND => {
                 error!("Resource not found at {}", url);

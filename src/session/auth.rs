@@ -61,6 +61,103 @@ impl<'a> IgAuth<'a> {
     fn get_client(&self) -> &Client {
         &self.http
     }
+
+    /// Refreshes an OAuth access token using the refresh token
+    ///
+    /// # Arguments
+    /// * `_session` - The current session with OAuth tokens (unused but kept for consistency)
+    /// * `refresh_token` - The refresh token to use for obtaining a new access token
+    ///
+    /// # Returns
+    /// * `Ok(IgSession)` - A new session with refreshed OAuth tokens
+    /// * `Err(AuthError)` - If the refresh fails
+    async fn refresh_oauth(
+        &self,
+        _session: &IgSession,
+        refresh_token: &str,
+    ) -> Result<IgSession, AuthError> {
+        let url = self.rest_url("session/refresh-token");
+        let api_key = self.cfg.credentials.api_key.trim();
+
+        debug!("OAuth token refresh request to URL: {}", url);
+        debug!("Using API key (length): {}", api_key.len());
+        debug!("Using refresh token (length): {}", refresh_token.len());
+
+        // Create the request body with the refresh token
+        let body = serde_json::json!({
+            "refresh_token": refresh_token
+        });
+
+        // Create a new client for each request
+        let client = Client::builder()
+            .user_agent(USER_AGENT)
+            .build()
+            .expect("reqwest client");
+
+        // Make the request with version 1 for OAuth refresh
+        let resp = match client
+            .post(url.clone())
+            .header("X-IG-API-KEY", api_key)
+            .header("Content-Type", "application/json")
+            .header("Version", "1")
+            .json(&body)
+            .send()
+            .await
+        {
+            Ok(resp) => resp,
+            Err(e) => {
+                error!("Failed to send OAuth refresh request: {}", e);
+                return Err(AuthError::Unexpected(StatusCode::INTERNAL_SERVER_ERROR));
+            }
+        };
+
+        debug!("OAuth refresh response status: {}", resp.status());
+        trace!("Response headers: {:#?}", resp.headers());
+
+        match resp.status() {
+            StatusCode::OK => {
+                // Parse the JSON response to get the new OAuth token
+                let json: SessionV3Resp = resp.json().await?;
+
+                debug!("Successfully refreshed OAuth token");
+                debug!("Account ID: {}", json.account_id);
+                debug!(
+                    "New access token length: {}",
+                    json.oauth_token.access_token.len()
+                );
+                debug!("Token expires in: {} seconds", json.oauth_token.expires_in);
+
+                // Create a new session with the refreshed OAuth tokens
+                let new_session = IgSession::from_oauth(
+                    json.oauth_token,
+                    json.account_id,
+                    json.client_id,
+                    json.lightstreamer_endpoint,
+                    self.cfg,
+                );
+
+                Ok(new_session)
+            }
+            StatusCode::UNAUTHORIZED => {
+                error!("OAuth refresh failed with UNAUTHORIZED");
+                let body = resp
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Could not read response body".to_string());
+                error!("Response body: {}", body);
+                Err(AuthError::BadCredentials)
+            }
+            other => {
+                error!("OAuth refresh failed with status: {}", other);
+                let body = resp
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Could not read response body".to_string());
+                error!("Response body: {}", body);
+                Err(AuthError::Unexpected(other))
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -422,6 +519,13 @@ impl IgAuthenticator for IgAuth<'_> {
 
     // only valid for Bearer tokens
     async fn refresh(&self, sess: &IgSession) -> Result<IgSession, AuthError> {
+        // Check if this is an OAuth session
+        if let Some(oauth_token) = &sess.oauth_token {
+            // Use OAuth refresh token endpoint
+            return self.refresh_oauth(sess, &oauth_token.refresh_token).await;
+        }
+
+        // Otherwise use CST/X-SECURITY-TOKEN refresh (API v2)
         let url = self.rest_url("session/refresh-token");
 
         // Ensure the API key is trimmed and has no whitespace

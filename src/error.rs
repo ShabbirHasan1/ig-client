@@ -137,6 +137,8 @@ pub enum AppError {
     Db(sqlx::Error),
     /// Unauthorized access error
     Unauthorized,
+    /// OAuth token expired error (requires token refresh)
+    OAuthTokenExpired,
     /// Resource not found error
     NotFound,
     /// API rate limit exceeded
@@ -170,6 +172,7 @@ impl Display for AppError {
             AppError::Unexpected(s) => write!(f, "unexpected http status: {s}"),
             AppError::Db(e) => write!(f, "db error: {e}"),
             AppError::Unauthorized => write!(f, "unauthorized"),
+            AppError::OAuthTokenExpired => write!(f, "oauth token expired"),
             AppError::NotFound => write!(f, "not found"),
             AppError::RateLimitExceeded => write!(f, "rate limit exceeded"),
             AppError::SerializationError(s) => write!(f, "serialization error: {s}"),
