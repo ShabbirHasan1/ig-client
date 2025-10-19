@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 /// Model for a market instrument with enhanced deserialization
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Instrument {
     /// Unique identifier for the instrument
     pub epic: String,
@@ -55,7 +55,7 @@ pub struct Instrument {
 }
 
 /// Model for an instrument's currency
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Currency {
     /// Currency code (e.g., "USD", "EUR")
     pub code: String,
@@ -73,7 +73,7 @@ pub struct Currency {
 }
 
 /// Model for market data with enhanced deserialization
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketDetails {
     /// Detailed information about the instrument
     pub instrument: Instrument,
@@ -85,7 +85,7 @@ pub struct MarketDetails {
 }
 
 /// Trading rules for a market with enhanced deserialization
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DealingRules {
     /// Minimum step distance
     #[serde(rename = "minStepDistance")]
@@ -125,7 +125,7 @@ pub struct DealingRules {
 }
 
 /// Market snapshot with enhanced deserialization
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketSnapshot {
     /// Current status of the market (e.g., "OPEN", "CLOSED")
     #[serde(rename = "marketStatus")]
@@ -177,7 +177,7 @@ pub struct MarketSnapshot {
 }
 
 /// Model for market search results
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketSearchResult {
     /// List of markets matching the search criteria
     pub markets: Vec<MarketData>,
@@ -231,7 +231,7 @@ impl Display for MarketData {
 }
 
 /// Model for historical prices
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalPricesResponse {
     /// List of historical price points
     pub prices: Vec<HistoricalPrice>,
@@ -244,7 +244,7 @@ pub struct HistoricalPricesResponse {
 }
 
 /// Historical price data point
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalPrice {
     /// Timestamp of the price data point
     #[serde(rename = "snapshotTime")]
@@ -267,7 +267,7 @@ pub struct HistoricalPrice {
 }
 
 /// Price point with bid, ask and last traded prices
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PricePoint {
     /// Bid price at this point
     pub bid: Option<f64>,
@@ -279,7 +279,7 @@ pub struct PricePoint {
 }
 
 /// Information about API usage allowance for price data
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceAllowance {
     /// Remaining API calls allowed in the current period
     #[serde(rename = "remainingAllowance")]
@@ -304,7 +304,7 @@ pub struct MarketNavigationResponse {
 }
 
 /// Details about instrument expiry
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExpiryDetails {
     /// The last dealing date and time for the instrument
     #[serde(rename = "lastDealingDate")]
@@ -330,7 +330,7 @@ pub enum StepUnit {
 }
 
 /// A struct to handle the minStepDistance value which can be a complex object
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StepDistance {
     /// Unit type for the distance
     pub unit: Option<StepUnit>,

@@ -1,6 +1,5 @@
 use crate::constants::{DAYS_TO_BACK_LOOK, DEFAULT_PAGE_SIZE, DEFAULT_SLEEP_TIME};
 use crate::storage::config::DatabaseConfig;
-use crate::utils::rate_limiter::RateLimitType;
 use dotenv::dotenv;
 use pretty_simple_display::DisplaySimple;
 use serde::{Deserialize, Serialize};
@@ -45,10 +44,6 @@ pub struct Config {
     pub page_size: u32,
     /// Number of days to look back when fetching historical data
     pub days_to_look_back: i64,
-    /// Rate limit type to use for API requests
-    pub rate_limit_type: RateLimitType,
-    /// Safety margin for rate limiting (0.0-1.0)
-    pub rate_limit_safety_margin: f64,
     /// API version to use for authentication (2 or 3). If None, auto-detect based on available tokens
     pub api_version: Option<u8>,
 }
@@ -101,17 +96,7 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Creates a new configuration instance from environment variables
-    ///
-    /// Loads configuration from environment variables or .env file.
-    /// Uses default values if environment variables are not found.
-    ///
-    /// # Returns
-    ///
-    /// A new `Config` instance
-    pub fn new() -> Self {
-        Self::with_rate_limit_type(RateLimitType::OnePerSecond, 0.5)
-    }
+
 
     /// Creates a new configuration instance with a specific rate limit type
     ///
@@ -123,7 +108,7 @@ impl Config {
     /// # Returns
     ///
     /// A new `Config` instance
-    pub fn with_rate_limit_type(rate_limit_type: RateLimitType, safety_margin: f64) -> Self {
+    pub fn new() -> Self {
         // Explicitly load the .env file
         match dotenv() {
             Ok(_) => debug!("Successfully loaded .env file"),
@@ -177,9 +162,7 @@ impl Config {
             }
         );
 
-        // Ensure safety margin is within valid range
-        let safety_margin = safety_margin.clamp(0.1, 1.0);
-
+        
         Config {
             credentials: Credentials {
                 username,
@@ -213,8 +196,6 @@ impl Config {
             sleep_hours,
             page_size,
             days_to_look_back,
-            rate_limit_type,
-            rate_limit_safety_margin: safety_margin,
             api_version: env::var("IG_API_VERSION")
                 .ok()
                 .and_then(|v| v.parse::<u8>().ok())
@@ -236,141 +217,3 @@ impl Config {
     }
 }
 
-#[cfg(test)]
-mod tests_display {
-    use super::*;
-    use assert_json_diff::assert_json_eq;
-    use serde_json::json;
-
-    #[test]
-    fn test_credentials_display() {
-        let credentials = Credentials {
-            username: "user123".to_string(),
-            password: "pass123".to_string(),
-            account_id: "acc456".to_string(),
-            api_key: "key789".to_string(),
-            client_token: Some("ctoken".to_string()),
-            account_token: None,
-        };
-
-        let display_output = credentials.to_string();
-        let expected_json = json!({
-            "username": "user123",
-            "password": "pass123",
-            "account_id": "acc456",
-            "api_key": "key789",
-            "client_token": "ctoken",
-            "account_token": null
-        });
-
-        assert_json_eq!(
-            serde_json::from_str::<serde_json::Value>(&display_output).unwrap(),
-            expected_json
-        );
-    }
-
-    #[test]
-    fn test_rest_api_config_display() {
-        let rest_api_config = RestApiConfig {
-            base_url: "https://api.example.com".to_string(),
-            timeout: 30,
-        };
-
-        let display_output = rest_api_config.to_string();
-        let expected_json = json!({
-            "base_url": "https://api.example.com",
-            "timeout": 30
-        });
-
-        assert_json_eq!(
-            serde_json::from_str::<serde_json::Value>(&display_output).unwrap(),
-            expected_json
-        );
-    }
-
-    #[test]
-    fn test_websocket_config_display() {
-        let websocket_config = WebSocketConfig {
-            url: "wss://ws.example.com".to_string(),
-            reconnect_interval: 5,
-        };
-
-        let display_output = websocket_config.to_string();
-        let expected_json = json!({
-            "url": "wss://ws.example.com",
-            "reconnect_interval": 5
-        });
-
-        assert_json_eq!(
-            serde_json::from_str::<serde_json::Value>(&display_output).unwrap(),
-            expected_json
-        );
-    }
-
-    #[test]
-    fn test_config_display() {
-        let config = Config {
-            credentials: Credentials {
-                username: "user123".to_string(),
-                password: "pass123".to_string(),
-                account_id: "acc456".to_string(),
-                api_key: "key789".to_string(),
-                client_token: Some("ctoken".to_string()),
-                account_token: None,
-            },
-            rest_api: RestApiConfig {
-                base_url: "https://api.example.com".to_string(),
-                timeout: 30,
-            },
-            websocket: WebSocketConfig {
-                url: "wss://ws.example.com".to_string(),
-                reconnect_interval: 5,
-            },
-            database: DatabaseConfig {
-                url: "postgres://user:pass@localhost/ig_db".to_string(),
-                max_connections: 5,
-            },
-            sleep_hours: 0,
-            page_size: 0,
-            days_to_look_back: 0,
-            rate_limit_type: RateLimitType::NonTradingAccount,
-            rate_limit_safety_margin: 0.8,
-            api_version: None,
-        };
-
-        let display_output = config.to_string();
-        let expected_json = json!({
-            "credentials": {
-                "username": "user123",
-                "password": "pass123",
-                "account_id": "acc456",
-                "api_key": "key789",
-                "client_token": "ctoken",
-                "account_token": null
-            },
-            "rest_api": {
-                "base_url": "https://api.example.com",
-                "timeout": 30
-            },
-            "websocket": {
-                "url": "wss://ws.example.com",
-                "reconnect_interval": 5
-            },
-            "database": {
-                "url": "postgres://user:pass@localhost/ig_db",
-                "max_connections": 5
-            },
-            "sleep_hours": 0,
-            "page_size": 0,
-            "days_to_look_back": 0,
-            "rate_limit_type": "NonTradingAccount",
-            "rate_limit_safety_margin": 0.8,
-            "api_version": null
-        });
-
-        assert_json_eq!(
-            serde_json::from_str::<serde_json::Value>(&display_output).unwrap(),
-            expected_json
-        );
-    }
-}

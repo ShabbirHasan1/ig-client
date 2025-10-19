@@ -7,11 +7,16 @@ pub struct SessionResp {
     pub account_id: String,
 
     /// Client ID provided by the API
-    #[serde(alias = "clientId")]
+    #[serde(alias = "clientId", default)]
     pub client_id: Option<String>,
+
     /// Timezone offset in hours
-    #[serde(alias = "timezoneOffset")]
+    #[serde(alias = "timezoneOffset", default)]
     pub timezone_offset: Option<i32>,
+
+    /// Lightstreamer endpoint for real-time data
+    #[serde(alias = "lightstreamerEndpoint", default)]
+    pub lightstreamer_endpoint: Option<String>,
 }
 
 /// Request model for switching the active account

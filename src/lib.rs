@@ -524,6 +524,8 @@ pub mod error;
 /// Data persistence and storage
 pub mod storage;
 
+pub mod auth;
+pub mod client;
 pub mod prelude;
 /// Utility functions and helpers
 pub mod utils;

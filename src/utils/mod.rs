@@ -6,11 +6,12 @@ pub mod id;
 pub mod logger;
 /// Module containing parsing utilities for instrument names and other data
 pub mod parsing;
-/// Module containing rate limiting functionality to manage API request frequency
-pub mod rate_limiter;
+
+/// Module containing session helper utilities for automatic token refresh
+pub mod session_helper;
 
 pub use finance::*;
 pub use id::*;
 pub use logger::*;
 pub use parsing::*;
-pub use rate_limiter::*;
+pub use session_helper::*;
