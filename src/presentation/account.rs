@@ -188,68 +188,51 @@ pub struct ActivityDetails {
 
 /// Types of actions that can be performed on an activity
 #[derive(Debug, Copy, Clone, DisplaySimple, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ActionType {
     /// A limit order was deleted
-    #[serde(rename = "LIMIT_ORDER_DELETED")]
     LimitOrderDeleted,
     /// A limit order was filled
-    #[serde(rename = "LIMIT_ORDER_FILLED")]
     LimitOrderFilled,
     /// A limit order was opened
-    #[serde(rename = "LIMIT_ORDER_OPENED")]
     LimitOrderOpened,
     /// A limit order was rolled
-    #[serde(rename = "LIMIT_ORDER_ROLLED")]
     LimitOrderRolled,
     /// A position was closed
-    #[serde(rename = "POSITION_CLOSED")]
     PositionClosed,
     /// A position was deleted
-    #[serde(rename = "POSITION_DELETED")]
     PositionDeleted,
     /// A position was opened
-    #[serde(rename = "POSITION_OPENED")]
     PositionOpened,
     /// A position was partially closed
-    #[serde(rename = "POSITION_PARTIALLY_CLOSED")]
     PositionPartiallyClosed,
     /// A position was rolled
-    #[serde(rename = "POSITION_ROLLED")]
     PositionRolled,
     /// A stop/limit was amended
-    #[serde(rename = "STOP_LIMIT_AMENDED")]
     StopLimitAmended,
     /// A stop order was amended
-    #[serde(rename = "STOP_ORDER_AMENDED")]
     StopOrderAmended,
     /// A stop order was deleted
-    #[serde(rename = "STOP_ORDER_DELETED")]
     StopOrderDeleted,
     /// A stop order was filled
-    #[serde(rename = "STOP_ORDER_FILLED")]
     StopOrderFilled,
     /// A stop order was opened
-    #[serde(rename = "STOP_ORDER_OPENED")]
     StopOrderOpened,
     /// A stop order was rolled
-    #[serde(rename = "STOP_ORDER_ROLLED")]
     StopOrderRolled,
     /// Unknown action type
-    #[serde(rename = "UNKNOWN")]
     Unknown,
     /// A working order was deleted
-    #[serde(rename = "WORKING_ORDER_DELETED")]
     WorkingOrderDeleted,
 }
 
 /// Action associated with an activity
 #[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivityAction {
     /// Type of action
-    #[serde(rename = "actionType")]
     pub action_type: ActionType,
     /// Deal ID affected by this action
-    #[serde(rename = "affectedDealId", default)]
     pub affected_deal_id: Option<String>,
 }
 
