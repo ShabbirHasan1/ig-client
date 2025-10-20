@@ -293,12 +293,12 @@ impl MarketDatabaseService {
     }
 
     /// Checks if epic has the required format: "XX.X.XXXXXXX.XX.XX" (exactly 4 dots)
-    fn is_valid_epic_format(&self, epic: &str) -> bool {
+    pub fn is_valid_epic_format(&self, epic: &str) -> bool {
         epic.matches('.').count() == 4
     }
 
     /// Finds the appropriate symbol for a market based on its name
-    fn find_symbol_for_market(
+    pub fn find_symbol_for_market(
         &self,
         instrument_name: &str,
         symbol_map: &HashMap<&str, &str>,
@@ -316,7 +316,7 @@ impl MarketDatabaseService {
     }
 
     /// Converts updateTime from milliseconds to formatted timestamp
-    fn convert_update_time(&self, update_time: &Option<String>) -> Option<DateTime<Utc>> {
+    pub fn convert_update_time(&self, update_time: &Option<String>) -> Option<DateTime<Utc>> {
         if let Some(time_str) = update_time
             && let Ok(timestamp_ms) = time_str.parse::<i64>()
         {
@@ -428,7 +428,7 @@ impl MarketDatabaseService {
     }
 
     /// Converts MarketData to MarketInstrument
-    fn convert_market_data_to_instrument(
+    pub fn convert_market_data_to_instrument(
         &self,
         market: &MarketData,
         node_id: &str,
@@ -436,7 +436,7 @@ impl MarketDatabaseService {
         let mut instrument = MarketInstrument::new(
             market.epic.clone(),
             market.instrument_name.clone(),
-            format!("{:?}", market.instrument_type),
+            format!("{:?}", market.instrument_type).to_uppercase(),
             node_id.to_string(),
             self.exchange_name.clone(),
         );
