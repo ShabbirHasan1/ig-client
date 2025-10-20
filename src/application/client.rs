@@ -16,6 +16,10 @@ use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
 use tracing::{debug, info};
+use crate::application::interfaces::account::AccountService;
+use crate::model::auth::AccountInfo;
+use crate::prelude::{AccountActivity, AccountsResponse};
+use crate::presentation::account::{Positions, TransactionHistory, WorkingOrders};
 
 pub struct Client {
     http_client: Arc<HttpClient>,
@@ -366,5 +370,42 @@ impl MarketService for Client {
 
         info!("Updated expiry dates for {} entries", vec_db_entries.len());
         Ok(vec_db_entries)
+    }
+}
+
+#[async_trait]
+impl AccountService for Client {
+    async fn get_accounts(&self) -> Result<AccountsResponse, AppError> {
+        info!("Getting account information");
+        let result: AccountsResponse = self.http_client.get("accounts", Some(1)).await?;
+        debug!(
+            "Account information obtained: {} accounts",
+            result.accounts.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_positions(&self) -> Result<Positions, AppError> {
+        todo!()
+    }
+
+    async fn get_positions_w_filter(&self, filter: &str) -> Result<Positions, AppError> {
+        todo!()
+    }
+
+    async fn get_working_orders(&self) -> Result<WorkingOrders, AppError> {
+        todo!()
+    }
+
+    async fn get_activity(&self, from: &str, to: &str) -> Result<AccountActivity, AppError> {
+        todo!()
+    }
+
+    async fn get_activity_with_details(&self, from: &str, to: &str) -> Result<AccountActivity, AppError> {
+        todo!()
+    }
+
+    async fn get_transactions(&self, from: &str, to: &str) -> Result<TransactionHistory, AppError> {
+        todo!()
     }
 }

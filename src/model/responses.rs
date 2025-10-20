@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 19/10/25
 ******************************************************************************/
-use crate::prelude::MarketDetails;
+use crate::prelude::{Account, MarketDetails};
 use crate::presentation::instrument::InstrumentType;
 use crate::presentation::market::{
     HistoricalPrice, MarketData, MarketNavigationNode, MarketNode, PriceAllowance,
@@ -546,4 +546,10 @@ pub struct MarketNavigationResponse {
     /// List of markets at the current level
     #[serde(default, deserialize_with = "deserialize_null_as_empty_vec")]
     pub markets: Vec<MarketData>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AccountsResponse {
+    /// List of accounts owned by the user
+    pub accounts: Vec<Account>,
 }

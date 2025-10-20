@@ -74,7 +74,7 @@ impl Default for RetryConfig {
     fn default() -> Self {
         let max_retry_count: Option<u32> = get_env_or_none("MAX_RETRY_COUNT");
         let retry_delay_secs: Option<u64> = get_env_or_none("RETRY_DELAY_SECS");
-        
+
         Self {
             max_retry_count,
             retry_delay_secs,

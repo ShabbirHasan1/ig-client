@@ -15,6 +15,7 @@
 use crate::application::config::Config;
 use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
+pub(crate) use crate::model::auth::{OAuthToken, SecurityHeaders, SessionResponse};
 use crate::model::http::make_http_request;
 use crate::model::retry::RetryConfig;
 use chrono::Utc;
@@ -22,10 +23,8 @@ use reqwest::{Client, Method};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
-pub(crate) use crate::model::auth::{OAuthToken, SecurityHeaders, SessionResponse};
 
 const USER_AGENT: &str = "ig-client/0.6.0";
-
 
 /// Session information for authenticated requests
 #[derive(Debug, Clone)]
@@ -220,32 +219,36 @@ impl Auth {
             .headers()
             .get("CST")
             .and_then(|v| v.to_str().ok())
-            .map(String::from){
+            .map(String::from)
+        {
             Some(token) => token,
             None => {
                 error!("CST header not found in response");
                 return Err(AppError::InvalidInput("CST missing".to_string()));
-            }       
+            }
         };
         let x_security_token: String = match response
             .headers()
             .get("X-SECURITY-TOKEN")
             .and_then(|v| v.to_str().ok())
-            .map(String::from) {
+            .map(String::from)
+        {
             Some(token) => token,
             None => {
                 error!("X-SECURITY-TOKEN header not found in response");
-                return Err(AppError::InvalidInput("X-SECURITY-TOKEN missing".to_string()));
+                return Err(AppError::InvalidInput(
+                    "X-SECURITY-TOKEN missing".to_string(),
+                ));
             }
         };
-        
+
         let x_ig_api_key: String = response
             .headers()
             .get("X-IG-API-KEY")
             .and_then(|v| v.to_str().ok())
             .map(String::from)
-        .unwrap_or_else(|| self.config.credentials.api_key.clone());
-        
+            .unwrap_or_else(|| self.config.credentials.api_key.clone());
+
         let security_headers: SecurityHeaders = SecurityHeaders {
             cst,
             x_security_token,
@@ -254,7 +257,7 @@ impl Auth {
 
         let mut response: SessionResponse = response.json().await?;
         let session = response.get_session_v2(&security_headers);
-        
+
         Ok(session)
     }
 
@@ -289,7 +292,7 @@ impl Auth {
         let response: SessionResponse = response.json().await?;
         let session = response.get_session();
         assert!(session.is_oauth());
-        
+
         Ok(session)
     }
 
@@ -335,7 +338,9 @@ impl Auth {
     ) -> Result<Session, AppError> {
         let current_session = self.get_session().await?;
         if matches!(current_session.api_version, 3) {
-            return Err(AppError::InvalidInput("Cannot switch accounts with OAuth".to_string()));       
+            return Err(AppError::InvalidInput(
+                "Cannot switch accounts with OAuth".to_string(),
+            ));
         }
 
         if current_session.account_id == account_id {

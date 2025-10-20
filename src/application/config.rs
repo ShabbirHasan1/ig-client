@@ -1,5 +1,6 @@
 use crate::constants::{DAYS_TO_BACK_LOOK, DEFAULT_PAGE_SIZE, DEFAULT_SLEEP_TIME};
 use crate::storage::config::DatabaseConfig;
+use crate::utils::config::get_env_or_default;
 use dotenv::dotenv;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,6 @@ use sqlx::postgres::PgPoolOptions;
 use std::env;
 use tracing::error;
 use tracing::log::debug;
-use crate::utils::config::get_env_or_default;
 
 #[derive(DebugPretty, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Authentication credentials for the IG Markets API
@@ -120,7 +120,7 @@ impl Config {
         if api_key == "default_api_key" {
             error!("IG_API_KEY not found in environment variables or .env file");
         }
-        
+
         Config {
             credentials: Credentials {
                 username,

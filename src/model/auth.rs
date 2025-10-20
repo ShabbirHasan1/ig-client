@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 19/10/25
 ******************************************************************************/
+use crate::application::auth::Session;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
-use crate::application::auth::Session;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -23,23 +23,24 @@ impl SessionResponse {
         matches!(self, SessionResponse::V2(_))
     }
     pub fn get_session(&self) -> Session {
-        match self { 
-            SessionResponse::V3(v) => {
-                Session {
-                    account_id: v.account_id.clone(),
-                    client_id: v.client_id.clone(),
-                    lightstreamer_endpoint: v.lightstreamer_endpoint.clone(),
-                    cst: None,
-                    x_security_token: None,
-                    oauth_token: Some(v.oauth_token.clone()),
-                    api_version: 3,
-                    expires_at: v.oauth_token.expire_at(1)
-                }
+        match self {
+            SessionResponse::V3(v) => Session {
+                account_id: v.account_id.clone(),
+                client_id: v.client_id.clone(),
+                lightstreamer_endpoint: v.lightstreamer_endpoint.clone(),
+                cst: None,
+                x_security_token: None,
+                oauth_token: Some(v.oauth_token.clone()),
+                api_version: 3,
+                expires_at: v.oauth_token.expire_at(1),
             },
             SessionResponse::V2(v) => {
                 let (cst, x_security_token) = match v.security_headers.as_ref() {
-                    Some(headers) => (Some(headers.cst.clone()), Some(headers.x_security_token.clone())),
-                    None => (None, None)
+                    Some(headers) => (
+                        Some(headers.cst.clone()),
+                        Some(headers.x_security_token.clone()),
+                    ),
+                    None => (None, None),
                 };
                 let expires_at = (Utc::now().timestamp() + (3600 * 6)) as u64; // 6 hours from now
                 Session {
@@ -50,17 +51,17 @@ impl SessionResponse {
                     x_security_token,
                     oauth_token: None,
                     api_version: 2,
-                    expires_at
+                    expires_at,
                 }
-            },
+            }
         }
     }
     pub fn get_session_v2(&mut self, headers: &SecurityHeaders) -> Session {
-        match self { 
+        match self {
             SessionResponse::V3(_) => {
                 warn!("Returing V3 session from V2 headers - this may be unexpected");
                 self.get_session()
-            },
+            }
             SessionResponse::V2(v) => {
                 v.set_security_headers(headers);
                 v.expires_in = Some(21600); // 6 hours
@@ -70,12 +71,8 @@ impl SessionResponse {
     }
     pub fn is_expired(&self, margin_seconds: u64) -> bool {
         match self {
-            SessionResponse::V3(v) => {
-                v.oauth_token.is_expired(margin_seconds)
-            },
-            SessionResponse::V2(v) => {
-                v.is_expired(margin_seconds)
-            }
+            SessionResponse::V3(v) => v.oauth_token.is_expired(margin_seconds),
+            SessionResponse::V2(v) => v.is_expired(margin_seconds),
         }
     }
 }
@@ -175,7 +172,7 @@ impl V2Response {
     pub fn set_security_headers(&mut self, headers: &SecurityHeaders) {
         self.security_headers = Some(headers.clone());
     }
-    
+
     pub fn is_expired(&self, margin_seconds: u64) -> bool {
         if let Some(expires_in) = self.expires_in {
             let expiry_time = self.created_at + chrono::Duration::seconds(expires_in as i64);
