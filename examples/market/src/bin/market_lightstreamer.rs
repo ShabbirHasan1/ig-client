@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let password = ws_info.get_ws_password();
 
     // Create a subscription for a market
-    let epic = format!("MARKET:DO.D.OTCDDAX.95.IP");
+    let epic = "MARKET:DO.D.OTCDDAX.95.IP".to_string();
 
     let mut subscription = Subscription::new(
         SubscriptionMode::Merge,
@@ -38,7 +38,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "OFFER".to_string(),
         ]),
     )?;
-
 
     let listener = Listener::new(callback);
     subscription.set_data_adapter(None)?;

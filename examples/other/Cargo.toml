@@ -8,5 +8,5 @@ ig-client = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
-nanoid = { workspace = true}
 chrono = { workspace = true }
+reqwest = { workspace = true }

@@ -8,14 +8,10 @@
 //! error handling with exponential backoff.
 
 use chrono::{Duration, Utc};
-use ig_client::utils::rate_limiter::RateLimitType;
-use ig_client::{
-    application::models::transaction::TransactionList, application::services::AccountService,
-    application::services::account_service::AccountServiceImpl, config::Config,
-    session::auth::IgAuth, session::interface::IgAuthenticator, storage::utils::store_transactions,
-    transport::http_client::IgHttpClientImpl, utils::logger::setup_logger,
-};
-use std::{sync::Arc, time::Duration as StdDuration};
+use ig_client::prelude::*;
+use ig_client::presentation::transaction::TransactionList;
+use ig_client::storage::utils::store_transactions;
+use std::time::Duration as StdDuration;
 use tokio::{signal, time};
 use tracing::{debug, error, info};
 
@@ -23,12 +19,9 @@ use tracing::{debug, error, info};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
-    info!("Starting transaction loop service");
+    info!("=== Transaction Loop Service ===");
 
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::NonTradingAccount,
-        0.7,
-    ));
+    let config = Config::default();
     info!(
         "Configuration: interval={} hours, page_size={}, lookback={} days",
         config.sleep_hours, config.page_size, config.days_to_look_back
@@ -70,24 +63,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // If this is the first run, the interval will tick immediately
                 info!("Starting scheduled transaction fetch");
 
-                // Create HTTP client and authenticator
-                let http_client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
-                let authenticator = IgAuth::new(&config);
-
-                // Attempt to login
-                let session = match authenticator.login().await {
-                    Ok(session) => {
-                        info!("Session started successfully");
-                        session
-                    }
-                    Err(e) => {
-                        error!("Failed to login: {}", e);
-                        continue; // Skip this iteration and try again
-                    }
-                };
-
-                // Create account service
-                let account_service = AccountServiceImpl::new(Arc::clone(&config), Arc::clone(&http_client));
+                // Create client
+                let client = Client::default();
 
                 // Calculate date range
                 let to = Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
@@ -98,9 +75,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 info!("Fetching transactions from {} to {}", from, to);
 
                 // Fetch first page to get total pages
-                let first_page = match account_service
+                let first_page = match client
                     .get_transactions(
-                        &session,
                         &from,
                         &to,
                     )
@@ -127,9 +103,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Add a small delay between requests to avoid rate limiting
                     time::sleep(StdDuration::from_millis(500)).await;
 
-                    match account_service
+                    match client
                         .get_transactions(
-                            &session,
                             &from,
                             &to,
                         )

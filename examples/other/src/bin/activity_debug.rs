@@ -1,29 +1,16 @@
-use ig_client::utils::rate_limiter::RateLimitType;
-use ig_client::{
-    config::Config, session::auth::IgAuth, session::interface::IgAuthenticator,
-    utils::logger::setup_logger,
-};
-use std::sync::Arc;
+use ig_client::prelude::*;
 use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
-    // Create configuration using the default Config implementation
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::NonTradingAccount,
-        0.7,
-    ));
-    info!("Configuration loaded");
+    info!("=== Activity Debug Example ===");
 
-    // Create authenticator
-    let authenticator = IgAuth::new(&config);
-    info!("Authenticator created");
-
-    // Login to IG
-    info!("Logging in to IG...");
-    let session = authenticator.login().await?;
+    // Create HTTP client and config
+    let http_client = HttpClient::default();
+    let config = Config::default();
+    let session = http_client.get_session().await?;
     info!("Session started successfully");
 
     // Get activity with raw response handling
@@ -41,8 +28,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .header("Content-Type", "application/json; charset=UTF-8")
         .header("Accept", "application/json; charset=UTF-8")
         .header("Version", "3")
-        .header("CST", &session.cst)
-        .header("X-SECURITY-TOKEN", &session.token)
+        .header("CST", session.cst.as_ref().unwrap())
+        .header(
+            "X-SECURITY-TOKEN",
+            session.x_security_token.as_ref().unwrap(),
+        )
         .send()
         .await?;
 

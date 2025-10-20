@@ -79,7 +79,7 @@ members = [
     "examples/prices",
     "examples/transactions",
     "examples/positions",
-#    "examples/other",
+    "examples/other",
     "examples/simples",
 ]
 

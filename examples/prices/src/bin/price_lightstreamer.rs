@@ -41,7 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]),
     )?;
 
-
     let listener = Listener::new(callback);
     subscription.set_data_adapter(None)?;
     subscription.set_requested_snapshot(Some(Snapshot::Yes))?;
