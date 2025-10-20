@@ -25,12 +25,16 @@
 
 use crate::application::auth::{Auth, Session};
 use crate::application::config::Config;
+use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
-use reqwest::{Client as HttpClient, Method, RequestBuilder, Response, StatusCode};
+use crate::model::http::make_http_request;
+use crate::model::retry::RetryConfig;
+use reqwest::{Client as HttpClient, Method, Response};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-use tracing::{debug, error, warn};
+use tokio::sync::RwLock;
+use tracing::warn;
 
 const USER_AGENT: &str = "ig-client/0.6.0";
 
@@ -41,10 +45,12 @@ const USER_AGENT: &str = "ig-client/0.6.0";
 /// - OAuth token refresh
 /// - Re-authentication when tokens expire
 /// - Account switching
+/// - Rate limiting for all API requests
 pub struct Client {
     auth: Arc<Auth>,
     http_client: HttpClient,
     config: Arc<Config>,
+    rate_limiter: Arc<RwLock<RateLimiter>>,
 }
 
 impl Client {
@@ -70,11 +76,13 @@ impl Client {
         auth.login().await?;
 
         let http_client = HttpClient::builder().user_agent(USER_AGENT).build()?;
+        let rate_limiter = Arc::new(RwLock::new(RateLimiter::new(&config.rate_limiter)));
 
         Ok(Self {
             auth,
             http_client,
             config,
+            rate_limiter,
         })
     }
 
@@ -93,10 +101,13 @@ impl Client {
             .build()
             .expect("Failed to create HTTP client");
 
+        let rate_limiter = Arc::new(RwLock::new(RateLimiter::new(&config.rate_limiter)));
+
         Self {
             auth,
             http_client,
             config,
+            rate_limiter,
         }
     }
 
@@ -199,7 +210,7 @@ impl Client {
         }
     }
 
-    /// Internal method to make HTTP requests
+    /// Internal method to make HTTP requests using the common HTTP utility
     async fn request_internal<B: Serialize>(
         &self,
         method: Method,
@@ -218,74 +229,51 @@ impl Client {
             format!("{}/{}", self.config.rest_api.base_url, path)
         };
 
-        debug!("{} {}", method, url);
+        // Build headers vector - need to own strings for lifetime
+        let api_key = self.config.credentials.api_key.clone();
+        let version_owned = version
+            .map(String::from)
+            .unwrap_or_else(|| session.api_version.to_string());
+        let auth_header_value;
+        let account_id;
+        let cst;
+        let x_security_token;
 
-        // Build request
-        let mut request = self
-            .http_client
-            .request(method, &url)
-            .header("X-IG-API-KEY", &self.config.credentials.api_key)
-            .header("Content-Type", "application/json; charset=UTF-8")
-            .header("Accept", "application/json; charset=UTF-8");
-
-        // Add version header
-        if let Some(v) = version {
-            request = request.header("Version", v);
-        } else {
-            request = request.header("Version", session.api_version.to_string());
-        }
+        let mut headers = vec![
+            ("X-IG-API-KEY", api_key.as_str()),
+            ("Content-Type", "application/json; charset=UTF-8"),
+            ("Accept", "application/json; charset=UTF-8"),
+            ("Version", version_owned.as_str()),
+        ];
 
         // Add authentication headers
-        request = self.add_auth_headers(request, &session);
-
-        // Add body if present
-        if let Some(b) = body {
-            request = request.json(b);
-        }
-
-        // Send request
-        let response = request.send().await?;
-
-        let status = response.status();
-        debug!("Response status: {}", status);
-
-        // Check for OAuth token expired error
-        if status == StatusCode::UNAUTHORIZED {
-            // Try to read the body to check for OAuth error
-            let body_text = response.text().await.unwrap_or_default();
-            if body_text.contains("oauth-token-invalid") {
-                return Err(AppError::OAuthTokenExpired);
-            }
-            error!("Unauthorized: {}", body_text);
-            return Err(AppError::Unauthorized);
-        }
-
-        if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
-            error!("Request failed with status {}: {}", status, body);
-            return Err(AppError::Unexpected(status));
-        }
-
-        Ok(response)
-    }
-
-    /// Adds authentication headers to a request
-    fn add_auth_headers(&self, mut request: RequestBuilder, session: &Session) -> RequestBuilder {
         if let Some(oauth) = &session.oauth_token {
             // OAuth authentication (API v3)
-            request = request
-                .header("Authorization", format!("Bearer {}", oauth.access_token))
-                .header("IG-ACCOUNT-ID", &session.account_id);
+            auth_header_value = format!("Bearer {}", oauth.access_token);
+            account_id = session.account_id.clone();
+            headers.push(("Authorization", auth_header_value.as_str()));
+            headers.push(("IG-ACCOUNT-ID", account_id.as_str()));
         } else {
-            // API v2 authentication
-            if let Some(cst) = &session.cst {
-                request = request.header("CST", cst);
-            }
-            if let Some(token) = &session.x_security_token {
-                request = request.header("X-SECURITY-TOKEN", token);
+            // CST/X-SECURITY-TOKEN authentication (API v2)
+            if let (Some(cst_val), Some(token_val)) = (&session.cst, &session.x_security_token) {
+                cst = cst_val.clone();
+                x_security_token = token_val.clone();
+                headers.push(("CST", cst.as_str()));
+                headers.push(("X-SECURITY-TOKEN", x_security_token.as_str()));
             }
         }
-        request
+
+        // Use the common HTTP request function with infinite retries and 10 second delay
+        make_http_request(
+            &self.http_client,
+            self.rate_limiter.clone(),
+            method,
+            &url,
+            headers,
+            body,
+            RetryConfig::infinite(), // infinite retries with 10 second delay
+        )
+        .await
     }
 
     /// Parses a response into the desired type

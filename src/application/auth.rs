@@ -15,65 +15,18 @@
 use crate::application::config::Config;
 use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
-use crate::model::responses::{SessionResponse, SessionV3Response};
+use crate::model::http::make_http_request;
+use crate::model::retry::RetryConfig;
 use chrono::Utc;
-use reqwest::{Client, StatusCode};
+use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
+use crate::model::auth::{OAuthToken, SecurityHeaders, SessionResponse};
 
 const USER_AGENT: &str = "ig-client/0.6.0";
 
-/// OAuth token information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OAuthToken {
-    /// Access token for API requests
-    pub access_token: String,
-    /// Refresh token for obtaining new access tokens
-    pub refresh_token: String,
-    /// Token expiration time in seconds
-    pub expires_in: u64,
-    /// Token scope
-    pub scope: String,
-    /// Token type (usually "Bearer")
-    pub token_type: String,
-    /// Timestamp when token was created (milliseconds since epoch)
-    #[serde(skip)]
-    pub created_at: i64,
-}
-
-impl OAuthToken {
-    /// Creates a new OAuth token with current timestamp
-    pub fn new(
-        access_token: String,
-        refresh_token: String,
-        expires_in: u64,
-        scope: String,
-        token_type: String,
-    ) -> Self {
-        Self {
-            access_token,
-            refresh_token,
-            expires_in,
-            scope,
-            token_type,
-            created_at: Utc::now().timestamp(),
-        }
-    }
-
-    /// Checks if the token is expired or will expire soon
-    ///
-    /// # Arguments
-    /// * `margin_seconds` - Safety margin in seconds (default: 300 = 5 minutes)
-    #[must_use]
-    pub fn is_expired(&self, margin_seconds: Option<i64>) -> bool {
-        let margin = margin_seconds.unwrap_or(300);
-        let now = Utc::now().timestamp();
-        let expires_at = self.created_at + self.expires_in as i64;
-        now >= (expires_at - margin)
-    }
-}
 
 /// Session information for authenticated requests
 #[derive(Debug, Clone)]
@@ -81,9 +34,9 @@ pub struct Session {
     /// Account ID
     pub account_id: String,
     /// Client ID (for OAuth)
-    pub client_id: Option<String>,
+    pub client_id: String,
     /// Lightstreamer endpoint
-    pub lightstreamer_endpoint: Option<String>,
+    pub lightstreamer_endpoint: String,
     /// CST token (API v2)
     pub cst: Option<String>,
     /// X-SECURITY-TOKEN (API v2)
@@ -92,6 +45,10 @@ pub struct Session {
     pub oauth_token: Option<OAuthToken>,
     /// API version used
     pub api_version: u8,
+    /// Unix timestamp when session expires (seconds since epoch)
+    /// - OAuth (v3): expires in 30 seconds
+    /// - API v2: expires in 6 hours (21600 seconds)
+    pub expires_at: u64,
 }
 
 impl Session {
@@ -101,17 +58,44 @@ impl Session {
         self.oauth_token.is_some()
     }
 
-    /// Checks if OAuth token needs refresh
+    /// Checks if session is expired or will expire soon
     ///
     /// # Arguments
-    /// * `margin_seconds` - Safety margin in seconds (default: 300 = 5 minutes)
+    /// * `margin_seconds` - Safety margin in seconds (default: 60 = 1 minute)
+    ///
+    /// # Returns
+    /// * `true` if session is expired or will expire within margin
+    /// * `false` if session is still valid
     #[must_use]
-    pub fn needs_token_refresh(&self, margin_seconds: Option<i64>) -> bool {
-        if let Some(oauth) = &self.oauth_token {
-            oauth.is_expired(margin_seconds)
-        } else {
-            false
-        }
+    pub fn is_expired(&self, margin_seconds: Option<u64>) -> bool {
+        let margin = margin_seconds.unwrap_or(60);
+        let now = Utc::now().timestamp() as u64;
+        now >= (self.expires_at - margin)
+    }
+
+    /// Gets the number of seconds until session expires
+    ///
+    /// # Returns
+    /// * Positive number if session is still valid
+    /// * Negative number if session is already expired
+    #[must_use]
+    pub fn seconds_until_expiry(&self) -> u64 {
+        self.expires_at - Utc::now().timestamp() as u64
+    }
+
+    /// Checks if OAuth token needs refresh (alias for is_expired for backwards compatibility)
+    ///
+    /// # Arguments
+    /// * `margin_seconds` - Safety margin in seconds (default: 60 = 1 minute)
+    #[must_use]
+    pub fn needs_token_refresh(&self, margin_seconds: Option<u64>) -> bool {
+        self.is_expired(margin_seconds)
+    }
+}
+
+impl From<SessionResponse> for Session {
+    fn from(v: SessionResponse) -> Self {
+        v.get_session()
     }
 }
 
@@ -127,7 +111,7 @@ pub struct Auth {
     config: Arc<Config>,
     client: Client,
     session: Arc<RwLock<Option<Session>>>,
-    rate_limiter: RateLimiter,
+    rate_limiter: Arc<RwLock<RateLimiter>>,
 }
 
 impl Auth {
@@ -141,7 +125,7 @@ impl Auth {
             .build()
             .expect("Failed to create HTTP client");
 
-        let rate_limiter = RateLimiter::new(&config.rate_limiter);
+        let rate_limiter = Arc::new(RwLock::new(RateLimiter::new(&config.rate_limiter)));
 
         Self {
             config,
@@ -204,11 +188,8 @@ impl Auth {
         Ok(session)
     }
 
-    /// Performs login using API v2 (CST/X-SECURITY-TOKEN)
+    /// Performs login using API v2 (CST/X-SECURITY-TOKEN) with automatic retry on rate limit
     async fn login_v2(&self) -> Result<Session, AppError> {
-        // Wait for rate limiter
-        self.rate_limiter.wait().await;
-
         let url = format!("{}/session", self.config.rest_api.base_url);
 
         let body = serde_json::json!({
@@ -218,52 +199,68 @@ impl Auth {
 
         debug!("Sending v2 login request to: {}", url);
 
-        let response = self
-            .client
-            .post(&url)
-            .header("X-IG-API-KEY", &self.config.credentials.api_key)
-            .header("Content-Type", "application/json")
-            .header("Version", "2")
-            .json(&body)
-            .send()
-            .await?;
+        let headers = vec![
+            ("X-IG-API-KEY", self.config.credentials.api_key.as_str()),
+            ("Content-Type", "application/json"),
+            ("Version", "2"),
+        ];
 
-        let status = response.status();
-        let cst = response
+        let response = make_http_request(
+            &self.client,
+            self.rate_limiter.clone(),
+            Method::POST,
+            &url,
+            headers,
+            &Some(body),
+            RetryConfig::infinite(),
+        )
+        .await?;
+
+        // Extract CST and X-SECURITY-TOKEN from headers
+        let cst: String = match response
             .headers()
             .get("CST")
             .and_then(|v| v.to_str().ok())
-            .map(String::from);
-        let x_security_token = response
+            .map(String::from){
+            Some(token) => token,
+            None => {
+                error!("CST header not found in response");
+                return Err(AppError::InvalidInput("CST missing".to_string()));
+            }       
+        };
+        let x_security_token: String = match response
             .headers()
             .get("X-SECURITY-TOKEN")
             .and_then(|v| v.to_str().ok())
-            .map(String::from);
-
-        if status != StatusCode::OK {
-            let body = response.text().await.unwrap_or_default();
-            error!("Login failed with status {}: {}", status, body);
-            return Err(AppError::Unauthorized);
-        }
-
-        let json: SessionResponse = response.json().await?;
-
-        Ok(Session {
-            account_id: json.account_id,
-            client_id: json.client_id,
-            lightstreamer_endpoint: json.lightstreamer_endpoint,
+            .map(String::from) {
+            Some(token) => token,
+            None => {
+                error!("X-SECURITY-TOKEN header not found in response");
+                return Err(AppError::InvalidInput("X-SECURITY-TOKEN missing".to_string()));
+            }
+        };
+        
+        let x_ig_api_key: String = response
+            .headers()
+            .get("X-IG-API-KEY")
+            .and_then(|v| v.to_str().ok())
+            .map(String::from)
+        .unwrap_or_else(|| self.config.credentials.api_key.clone());
+        
+        let security_headers: SecurityHeaders = SecurityHeaders {
             cst,
             x_security_token,
-            oauth_token: None,
-            api_version: 2,
-        })
+            x_ig_api_key,
+        };
+
+        let mut response: SessionResponse = response.json().await?;
+        let session = response.get_session_v2(&security_headers);
+        
+        Ok(session)
     }
 
-    /// Performs login using API v3 (OAuth)
+    /// Performs login using API v3 (OAuth) with automatic retry on rate limit
     async fn login_oauth(&self) -> Result<Session, AppError> {
-        // Wait for rate limiter
-        self.rate_limiter.wait().await;
-
         let url = format!("{}/session", self.config.rest_api.base_url);
 
         let body = serde_json::json!({
@@ -273,54 +270,31 @@ impl Auth {
 
         debug!("Sending OAuth login request to: {}", url);
 
-        let response = self
-            .client
-            .post(&url)
-            .header("X-IG-API-KEY", &self.config.credentials.api_key)
-            .header("Content-Type", "application/json")
-            .header("Version", "3")
-            .json(&body)
-            .send()
-            .await?;
+        let headers = vec![
+            ("X-IG-API-KEY", self.config.credentials.api_key.as_str()),
+            ("Content-Type", "application/json"),
+            ("Version", "3"),
+        ];
 
-        let status = response.status();
+        let response = make_http_request(
+            &self.client,
+            self.rate_limiter.clone(),
+            Method::POST,
+            &url,
+            headers,
+            &Some(body),
+            RetryConfig::infinite(),
+        )
+        .await?;
 
-        if status != StatusCode::OK {
-            let body = response.text().await.unwrap_or_default();
-            error!("OAuth login failed with status {}: {}", status, body);
-            return Err(AppError::Unauthorized);
-        }
-
-        let json: SessionV3Response = response.json().await?;
-
-        debug!(
-            "OAuth token expires in {} seconds",
-            json.oauth_token.expires_in
-        );
-
-        // Convert the expires_in string to u64
-        let expires_in = json.oauth_token.expires_in.parse::<u64>().unwrap_or(600);
-
-        let oauth_token = OAuthToken::new(
-            json.oauth_token.access_token,
-            json.oauth_token.refresh_token,
-            expires_in,
-            json.oauth_token.scope,
-            json.oauth_token.token_type,
-        );
-
-        Ok(Session {
-            account_id: json.account_id,
-            client_id: Some(json.client_id),
-            lightstreamer_endpoint: Some(json.lightstreamer_endpoint),
-            cst: None,
-            x_security_token: None,
-            oauth_token: Some(oauth_token),
-            api_version: 3,
-        })
+        let response: SessionResponse = response.json().await?;
+        let session = response.get_session();
+        assert!(session.is_oauth());
+        
+        Ok(session)
     }
 
-    /// Refreshes an expired OAuth token
+    /// Refreshes an expired OAuth token with automatic retry on rate limit
     ///
     /// If refresh fails (e.g., refresh token expired), performs full re-authentication.
     ///
@@ -333,87 +307,17 @@ impl Auth {
             session.clone()
         };
 
-        let Some(sess) = current_session else {
+        if let Some(sess) = current_session {
+            if sess.is_expired(Some(1)) {
+                warn!("Expired, performing login");
+                self.login().await
+            } else {
+                Ok(sess)
+            }
+        } else {
             warn!("No session to refresh, performing login");
-            return self.login().await;
-        };
-
-        let Some(oauth) = &sess.oauth_token else {
-            warn!("Not an OAuth session, cannot refresh");
-            return Ok(sess);
-        };
-
-        info!("Refreshing OAuth token");
-
-        // Wait for rate limiter
-        self.rate_limiter.wait().await;
-
-        let url = format!("{}/session/refresh-token", self.config.rest_api.base_url);
-
-        let body = serde_json::json!({
-            "refresh_token": oauth.refresh_token,
-        });
-
-        let response = self
-            .client
-            .post(&url)
-            .header("X-IG-API-KEY", &self.config.credentials.api_key)
-            .header("Content-Type", "application/json")
-            .header("Version", "1")
-            .json(&body)
-            .send()
-            .await?;
-
-        let status = response.status();
-
-        if status != StatusCode::OK {
-            let body = response.text().await.unwrap_or_default();
-            warn!("Token refresh failed with status {}: {}", status, body);
-            warn!("Refresh token may be expired, attempting full re-authentication");
-
-            // Refresh token expired, need to login again
-            return self.login().await;
+            self.login().await
         }
-
-        // Parse the refresh token response (only contains OAuth token, not full session)
-        #[derive(Deserialize)]
-        struct RefreshTokenResponse {
-            access_token: String,
-            refresh_token: String,
-            expires_in: String,
-            scope: String,
-            token_type: String,
-        }
-
-        let token_response: RefreshTokenResponse = response.json().await?;
-
-        let expires_in = token_response.expires_in.parse::<u64>().unwrap_or(600);
-
-        let oauth_token = OAuthToken::new(
-            token_response.access_token,
-            token_response.refresh_token,
-            expires_in,
-            token_response.scope,
-            token_response.token_type,
-        );
-
-        // Update the OAuth token in the existing session, keeping other fields
-        let new_session = Session {
-            account_id: sess.account_id.clone(),
-            client_id: sess.client_id.clone(),
-            lightstreamer_endpoint: sess.lightstreamer_endpoint.clone(),
-            cst: None,
-            x_security_token: None,
-            oauth_token: Some(oauth_token),
-            api_version: 3,
-        };
-
-        // Update stored session
-        let mut session = self.session.write().await;
-        *session = Some(new_session.clone());
-
-        info!("✓ Token refreshed successfully");
-        Ok(new_session)
     }
 
     /// Switches to a different trading account
@@ -431,6 +335,9 @@ impl Auth {
         default_account: Option<bool>,
     ) -> Result<Session, AppError> {
         let current_session = self.get_session().await?;
+        if matches!(current_session.api_version, 3) {
+            return Err(AppError::InvalidInput("Cannot switch accounts with OAuth".to_string()));       
+        }
 
         if current_session.account_id == account_id {
             debug!("Already on account {}", account_id);
@@ -438,9 +345,6 @@ impl Auth {
         }
 
         info!("Switching to account: {}", account_id);
-
-        // Wait for rate limiter
-        self.rate_limiter.wait().await;
 
         let url = format!("{}/session", self.config.rest_api.base_url);
 
@@ -452,35 +356,43 @@ impl Auth {
             body["defaultAccount"] = serde_json::json!(default);
         }
 
-        let mut request = self
-            .client
-            .put(&url)
-            .header("X-IG-API-KEY", &self.config.credentials.api_key)
-            .header("Content-Type", "application/json")
-            .header("Version", "1")
-            .json(&body);
+        // Build headers with authentication
+        let api_key = self.config.credentials.api_key.clone();
+        let auth_header_value;
+        let cst;
+        let x_security_token;
 
-        // Add authentication headers
+        let mut headers = vec![
+            ("X-IG-API-KEY", api_key.as_str()),
+            ("Content-Type", "application/json"),
+            ("Version", "1"),
+        ];
+
+        // Add authentication headers based on session type
         if let Some(oauth) = &current_session.oauth_token {
-            request = request.header("Authorization", format!("Bearer {}", oauth.access_token));
+            auth_header_value = format!("Bearer {}", oauth.access_token);
+            headers.push(("Authorization", auth_header_value.as_str()));
         } else {
-            if let Some(cst) = &current_session.cst {
-                request = request.header("CST", cst);
+            if let Some(cst_val) = &current_session.cst {
+                cst = cst_val.clone();
+                headers.push(("CST", cst.as_str()));
             }
-            if let Some(token) = &current_session.x_security_token {
-                request = request.header("X-SECURITY-TOKEN", token);
+            if let Some(token_val) = &current_session.x_security_token {
+                x_security_token = token_val.clone();
+                headers.push(("X-SECURITY-TOKEN", x_security_token.as_str()));
             }
         }
 
-        let response = request.send().await?;
-
-        let status = response.status();
-
-        if status != StatusCode::OK {
-            let body = response.text().await.unwrap_or_default();
-            error!("Account switch failed with status {}: {}", status, body);
-            return Err(AppError::Unexpected(status));
-        }
+        let _response = make_http_request(
+            &self.client,
+            self.rate_limiter.clone(),
+            Method::PUT,
+            &url,
+            headers,
+            &Some(body),
+            RetryConfig::infinite(),
+        )
+        .await?;
 
         // After switching, update the session
         let mut new_session = current_session.clone();
