@@ -1,3 +1,4 @@
+use crate::presentation::market::HistoricalPrice;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use tracing::{info, warn};

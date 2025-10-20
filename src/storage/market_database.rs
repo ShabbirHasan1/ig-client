@@ -1,4 +1,4 @@
-use crate::application::models::market::{MarketData, MarketNode};
+use crate::prelude::{MarketData, MarketNode};
 use crate::storage::market_persistence::{MarketHierarchyNode, MarketInstrument};
 use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Row};
@@ -673,7 +673,7 @@ impl DatabaseStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::models::market::InstrumentType;
+    use crate::presentation::instrument::InstrumentType;
 
     #[tokio::test]
     #[ignore]

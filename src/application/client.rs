@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::application::interfaces::account::AccountService;
 use crate::application::interfaces::market::MarketService;
+use crate::application::interfaces::order::OrderService;
 use crate::error::AppError;
 use crate::model::http::HttpClient;
 use crate::model::requests::RecentPricesRequest;
@@ -17,13 +18,15 @@ use crate::prelude::{
     WorkingOrdersResponse,
 };
 use crate::presentation::market::{MarketData, MarketDetails};
+use crate::presentation::order::{
+    ClosePositionRequest, ClosePositionResponse, CreateOrderRequest, CreateOrderResponse,
+    OrderConfirmation, UpdatePositionRequest, UpdatePositionResponse,
+};
+use crate::presentation::working_order::{CreateWorkingOrderRequest, CreateWorkingOrderResponse};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
 use tracing::{debug, info};
-use crate::application::interfaces::order::OrderService;
-use crate::presentation::order::{ClosePositionRequest, ClosePositionResponse, CreateOrderRequest, CreateOrderResponse, OrderConfirmation, UpdatePositionRequest, UpdatePositionResponse};
-use crate::presentation::working_order::{CreateWorkingOrderRequest, CreateWorkingOrderResponse};
 
 pub struct Client {
     http_client: Arc<HttpClient>,
@@ -32,7 +35,6 @@ pub struct Client {
 impl Client {
     pub fn new() -> Self {
         let http_client = Arc::new(HttpClient::default());
-        let _ = http_client.get_session();
         Self { http_client }
     }
 }
@@ -499,30 +501,82 @@ impl AccountService for Client {
 
 #[async_trait]
 impl OrderService for Client {
-    async fn create_order(&self, order: &CreateOrderRequest) -> Result<CreateOrderResponse, AppError> {
+    async fn create_order(
+        &self,
+        order: &CreateOrderRequest,
+    ) -> Result<CreateOrderResponse, AppError> {
         info!("Creating order for: {}", order.epic);
-        let result: CreateOrderResponse = self.http_client.post("positions/otc", order, Some(2)).await?;
+        let result: CreateOrderResponse = self
+            .http_client
+            .post("positions/otc", order, Some(2))
+            .await?;
         debug!("Order created with reference: {}", result.deal_reference);
         Ok(result)
     }
 
-    async fn get_order_confirmation(&self, deal_reference: &str) -> Result<OrderConfirmation, AppError> {
-        todo!()
+    async fn get_order_confirmation(
+        &self,
+        deal_reference: &str,
+    ) -> Result<OrderConfirmation, AppError> {
+        let path = format!("confirms/{}", deal_reference);
+        info!("Getting confirmation for order: {}", deal_reference);
+        let result: OrderConfirmation = self.http_client.get(&path, Some(1)).await?;
+        debug!("Confirmation obtained for order: {}", deal_reference);
+        Ok(result)
     }
 
-    async fn update_position(&self, deal_id: &str, update: &UpdatePositionRequest) -> Result<UpdatePositionResponse, AppError> {
-        todo!()
+    async fn update_position(
+        &self,
+        deal_id: &str,
+        update: &UpdatePositionRequest,
+    ) -> Result<UpdatePositionResponse, AppError> {
+        let path = format!("positions/otc/{}", deal_id);
+        info!("Updating position: {}", deal_id);
+        let result: UpdatePositionResponse = self.http_client.put(&path, update, Some(2)).await?;
+        debug!(
+            "Position updated: {} with deal reference: {}",
+            deal_id, result.deal_reference
+        );
+        Ok(result)
     }
 
-    async fn close_position(&self, close_request: &ClosePositionRequest) -> Result<ClosePositionResponse, AppError> {
-        todo!()
+    async fn close_position(
+        &self,
+        close_request: &ClosePositionRequest,
+    ) -> Result<ClosePositionResponse, AppError> {
+        info!("Closing position");
+
+        // IG API requires POST with _method: DELETE header for closing positions
+        // This is a workaround for HTTP client limitations with DELETE + body
+        let result: ClosePositionResponse = self
+            .http_client
+            .post_with_delete_method("positions/otc", close_request, Some(1))
+            .await?;
+
+        debug!("Position closed with reference: {}", result.deal_reference);
+        Ok(result)
     }
 
     async fn get_working_orders(&self) -> Result<WorkingOrdersResponse, AppError> {
-        todo!()
+        info!("Getting all working orders");
+        let result: WorkingOrdersResponse = self.http_client.get("workingorders", Some(2)).await?;
+        debug!("Retrieved {} working orders", result.working_orders.len());
+        Ok(result)
     }
 
-    async fn create_working_order(&self, order: &CreateWorkingOrderRequest) -> Result<CreateWorkingOrderResponse, AppError> {
-        todo!()
+    async fn create_working_order(
+        &self,
+        order: &CreateWorkingOrderRequest,
+    ) -> Result<CreateWorkingOrderResponse, AppError> {
+        info!("Creating working order for: {}", order.epic);
+        let result: CreateWorkingOrderResponse = self
+            .http_client
+            .post("workingorders/otc", order, Some(2))
+            .await?;
+        debug!(
+            "Working order created with reference: {}",
+            result.deal_reference
+        );
+        Ok(result)
     }
 }

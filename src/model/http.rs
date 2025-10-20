@@ -122,6 +122,41 @@ impl HttpClient {
         self.request(Method::DELETE, path, None::<()>, None).await
     }
 
+    /// Makes a POST request with _method: DELETE header
+    ///
+    /// This is required by IG API for closing positions, as they don't support
+    /// DELETE requests with a body. Instead, they use POST with a special header.
+    ///
+    /// # Arguments
+    /// * `path` - API endpoint path
+    /// * `body` - Request body to send
+    /// * `version` - API version to use
+    ///
+    /// # Returns
+    /// Deserialized response of type T
+    pub async fn post_with_delete_method<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: B,
+        version: Option<u8>,
+    ) -> Result<T, AppError> {
+        match self
+            .request_internal_with_delete_method(path, &body, version)
+            .await
+        {
+            Ok(response) => self.parse_response(response).await,
+            Err(AppError::OAuthTokenExpired) => {
+                warn!("OAuth token expired, refreshing and retrying");
+                self.auth.refresh_token().await?;
+                let response = self
+                    .request_internal_with_delete_method(path, &body, version)
+                    .await?;
+                self.parse_response(response).await
+            }
+            Err(e) => Err(e),
+        }
+    }
+
     /// Makes a request with custom API version
     pub async fn request<B: Serialize, T: DeserializeOwned>(
         &self,
@@ -195,6 +230,63 @@ impl HttpClient {
             &url,
             headers,
             body,
+            RetryConfig::infinite(),
+        )
+        .await
+    }
+
+    /// Internal method to make POST requests with _method: DELETE header
+    ///
+    /// This is required by IG API for closing positions
+    async fn request_internal_with_delete_method<B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+        version: Option<u8>,
+    ) -> Result<Response, AppError> {
+        let session = self.auth.get_session().await?;
+
+        let url = if path.starts_with("http") {
+            path.to_string()
+        } else {
+            let path = path.trim_start_matches('/');
+            format!("{}/{}", self.config.rest_api.base_url, path)
+        };
+
+        let api_key = self.config.credentials.api_key.clone();
+        let version_owned = version.unwrap_or(1).to_string();
+        let auth_header_value;
+        let account_id;
+        let cst;
+        let x_security_token;
+
+        let mut headers = vec![
+            ("X-IG-API-KEY", api_key.as_str()),
+            ("Content-Type", "application/json; charset=UTF-8"),
+            ("Accept", "application/json; charset=UTF-8"),
+            ("Version", version_owned.as_str()),
+            ("_method", "DELETE"), // Special header for IG API
+        ];
+
+        if let Some(oauth) = &session.oauth_token {
+            auth_header_value = format!("Bearer {}", oauth.access_token);
+            account_id = session.account_id.clone();
+            headers.push(("Authorization", auth_header_value.as_str()));
+            headers.push(("IG-ACCOUNT-ID", account_id.as_str()));
+        } else if let (Some(cst_val), Some(token_val)) = (&session.cst, &session.x_security_token) {
+            cst = cst_val.clone();
+            x_security_token = token_val.clone();
+            headers.push(("CST", cst.as_str()));
+            headers.push(("X-SECURITY-TOKEN", x_security_token.as_str()));
+        }
+
+        make_http_request(
+            &self.http_client,
+            self.rate_limiter.clone(),
+            Method::POST, // Always POST for this method
+            &url,
+            headers,
+            &Some(body),
             RetryConfig::infinite(),
         )
         .await

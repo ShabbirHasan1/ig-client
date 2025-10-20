@@ -3,8 +3,10 @@
    Email: jb@taunais.com
    Date: 19/10/25
 ******************************************************************************/
-use std::collections::HashMap;
 use crate::prelude::{Account, Activity, MarketDetails};
+use crate::presentation::account::{
+    AccountTransaction, ActivityMetadata, Position, TransactionMetadata, WorkingOrder,
+};
 use crate::presentation::instrument::InstrumentType;
 use crate::presentation::market::{
     HistoricalPrice, MarketData, MarketNavigationNode, MarketNode, PriceAllowance,
@@ -13,7 +15,7 @@ use crate::utils::parsing::deserialize_null_as_empty_vec;
 use chrono::{DateTime, Utc};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
-use crate::presentation::account::{AccountTransaction, ActivityMetadata, Position, TransactionMetadata, WorkingOrder};
+use std::collections::HashMap;
 
 #[derive(
     DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default,

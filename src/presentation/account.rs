@@ -227,7 +227,6 @@ pub struct ActivityAction {
     pub affected_deal_id: Option<String>,
 }
 
-
 /// Individual position
 #[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
 pub struct Position {
