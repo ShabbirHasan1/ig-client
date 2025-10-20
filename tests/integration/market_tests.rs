@@ -1,10 +1,7 @@
 // Integration tests for market endpoints
 
 use crate::common;
-use ig_client::utils::logger::setup_logger;
-use ig_client::{
-    application::services::MarketService, application::services::market_service::MarketServiceImpl,
-};
+use ig_client::prelude::*;
 use tokio::runtime::Runtime;
 use tracing::info;
 
@@ -12,31 +9,20 @@ use tracing::info;
 #[ignore]
 fn test_search_markets() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test search markets
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per application)
-        ig_client::utils::rate_limiter::app_non_trading_limiter()
-            .wait()
-            .await;
         // Search for a common market term
         let search_term = "Germany 40";
         info!("Searching for markets with term: {}", search_term);
 
-        let result = market_service
-            .search_markets(&session, search_term)
+        let result = client
+            .search_markets(search_term)
             .await
             .expect("Failed to search markets");
 
@@ -63,31 +49,20 @@ fn test_search_markets() {
 #[ignore]
 fn test_get_market_details() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get market details
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per application)
-        ig_client::utils::rate_limiter::app_non_trading_limiter()
-            .wait()
-            .await;
         // Use an open market
         let epic = "DO.D.OTCDDAX.143.IP"; // Open market provided by the user
         info!("Getting market details for: {}", epic);
 
-        let result = market_service
-            .get_market_details(&session, epic)
+        let result = client
+            .get_market_details(epic)
             .await
             .expect("Failed to get market details");
 
@@ -121,25 +96,14 @@ fn test_get_market_details() {
 #[ignore]
 fn test_get_multiple_market_details() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get multiple market details
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per application)
-        ig_client::utils::rate_limiter::app_non_trading_limiter()
-            .wait()
-            .await;
         // Use open markets
         let epics = vec![
             "DO.D.OTCDDAX.129.IP".to_string(),
@@ -149,8 +113,8 @@ fn test_get_multiple_market_details() {
 
         info!("Getting market details for multiple EPICs: {:?}", epics);
 
-        let results = market_service
-            .get_multiple_market_details(&session, &epics)
+        let results = client
+            .get_multiple_market_details(&epics)
             .await
             .expect("Failed to get multiple market details");
 
@@ -186,26 +150,14 @@ fn test_get_multiple_market_details() {
 #[ignore]
 fn test_get_historical_prices() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get historical prices
     rt.block_on(async {
-        // Wait to respect the rate limit (historical price data)
-        ig_client::utils::rate_limiter::historical_price_limiter()
-            .wait()
-            .await;
-
         // Calculate dates for last week (Monday to Friday)
         use chrono::{Datelike, Duration, Utc};
 
@@ -257,8 +209,8 @@ fn test_get_historical_prices() {
                 epic, resolution, from, to
             );
 
-            match market_service
-                .get_historical_prices(&session, epic, resolution, from, to)
+            match client
+                .get_historical_prices(epic, resolution, from, to)
                 .await
             {
                 Ok(result) => {
@@ -300,29 +252,18 @@ fn test_get_historical_prices() {
 #[ignore]
 fn test_get_market_navigation() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get market navigation
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per application)
-        ig_client::utils::rate_limiter::app_non_trading_limiter()
-            .wait()
-            .await;
         info!("Getting top-level market navigation nodes");
 
-        let result = market_service
-            .get_market_navigation(&session)
+        let result = client
+            .get_market_navigation()
             .await
             .expect("Failed to get market navigation");
 
@@ -356,28 +297,17 @@ fn test_get_market_navigation() {
 #[ignore]
 fn test_get_market_navigation_node() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get market navigation node
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per application)
-        ig_client::utils::rate_limiter::app_non_trading_limiter()
-            .wait()
-            .await;
         // First get the top-level nodes to find a node ID to use
-        let top_level = market_service
-            .get_market_navigation(&session)
+        let top_level = client
+            .get_market_navigation()
             .await
             .expect("Failed to get top-level market navigation");
 
@@ -395,8 +325,8 @@ fn test_get_market_navigation_node() {
             node_name, node_id
         );
 
-        let result = market_service
-            .get_market_navigation_node(&session, node_id)
+        let result = client
+            .get_market_navigation_node(node_id)
             .await
             .expect("Failed to get market navigation node");
 

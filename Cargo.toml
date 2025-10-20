@@ -39,27 +39,22 @@ async-trait = { workspace = true}
 regex = { workspace = true}
 dotenv = { workspace = true}
 lightstreamer-rs = { workspace = true}
-once_cell = { workspace = true}
 lazy_static = { workspace = true}
-rand = { workspace = true}
 nanoid = { workspace = true}
 pretty-simple-display = { workspace = true}
 governor = { workspace = true}
 prettytable-rs = { workspace = true}
 
 [dev-dependencies]
-assert-json-diff = "2.0"
-once_cell = "1.21"
-mockito = "1.7"
-tokio-test = "0.4"
 
-#[[test]]
-#name = "unit_tests"
-#path = "tests/unit/mod.rs"
-#
-#[[test]]
-#name = "integration_tests"
-#path = "tests/integration/main.rs"
+
+[[test]]
+name = "unit_tests"
+path = "tests/unit/mod.rs"
+
+[[test]]
+name = "integration_tests"
+path = "tests/integration/mod.rs"
 
 [lib]
 name = "ig_client"
