@@ -88,6 +88,10 @@ impl HttpClient {
         }
     }
 
+    /// Gets WebSocket connection information for Lightstreamer
+    ///
+    /// # Returns
+    /// * `WebsocketInfo` containing server endpoint, authentication tokens, and account ID
     pub async fn get_ws_info(&self) -> WebsocketInfo {
         self.auth.get_ws_info().await
     }

@@ -41,6 +41,7 @@ pub struct WebsocketInfo {
     pub cst: Option<String>,
     /// X-SECURITY-TOKEN for authentication (API v2)
     pub x_security_token: Option<String>,
+    /// Account ID for the WebSocket connection
     pub account_id: String,
 }
 

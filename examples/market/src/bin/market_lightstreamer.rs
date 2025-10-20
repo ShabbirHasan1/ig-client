@@ -8,7 +8,7 @@ use lightstreamer_rs::subscription::{Snapshot, Subscription, SubscriptionMode};
 use lightstreamer_rs::utils::setup_signal_hook;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 const MAX_CONNECTION_ATTEMPTS: u64 = 3;
 
@@ -24,10 +24,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let http_client = Client::default();
     let ws_info = http_client.get_ws_info().await;
     let password = ws_info.get_ws_password();
-    debug!("{ws_info:?}");
 
     // Create a subscription for a market
-    let epic = format!("PRICE:{}:DO.D.OTCDDAX.95.IP", ws_info.account_id);
+    let epic = format!("MARKET:DO.D.OTCDDAX.95.IP");
 
     let mut subscription = Subscription::new(
         SubscriptionMode::Merge,
@@ -35,9 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(vec![
             "HIGH".to_string(),
             "LOW".to_string(),
-            "BIDSIZE1".to_string(),
-            "ASKSIZE1".to_string(),
-            "DLG_FLAG".to_string(),
+            "BID".to_string(),
+            "OFFER".to_string(),
         ]),
     )?;
 
@@ -50,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a new Lightstreamer client instance and wrap it in an Arc<Mutex<>> so it can be shared across threads.
     let client = Arc::new(Mutex::new(LightstreamerClient::new(
         Some(ws_info.server.as_str()),
-        Some("Pricing"),
+        None,
         Some(&ws_info.account_id),
         Some(&password),
     )?));

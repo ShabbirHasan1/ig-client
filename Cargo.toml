@@ -76,6 +76,7 @@ members = [
     "examples/market",
     "examples/orders",
     "examples/trade",
+    "examples/prices",
     "examples/transactions",
     "examples/positions",
 #    "examples/other",
