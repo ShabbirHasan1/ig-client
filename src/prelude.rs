@@ -76,6 +76,7 @@ pub use crate::model::requests::{
 // Response models
 pub use crate::model::responses::{
     DBEntryResponse,
+    MultipleMarketDetailsResponse,
 };
 
 pub use crate::utils::*;

@@ -1,6 +1,5 @@
 use ig_client::prelude::*;
 use ig_client::utils::setup_logger;
-use std::error::Error;
 use tracing::{debug, error, info};
 
 // Constants for API request handling
@@ -60,18 +59,18 @@ async fn main() -> IgResult<()> {
         debug!("EPICs in this batch: {}", epics_chunk.join(", "));
 
         match client.get_multiple_market_details(epics_chunk).await {
-            Ok(details_vec) => {
+            Ok(response) => {
                 // Match each result with its corresponding EPIC
-                for (i, details) in details_vec.iter().enumerate() {
+                for (i, details) in response.iter().enumerate() {
                     let epic = &epics_chunk[i];
                     debug!("✅ Successfully fetched details for {}", epic);
                     market_details_vec.push((epic.clone(), details.clone()));
                 }
 
-                processed_count += details_vec.len();
+                processed_count += response.len();
                 info!(
                     "✅ Successfully processed batch of {} EPICs ({}/{})",
-                    details_vec.len(),
+                    response.len(),
                     processed_count,
                     total_epics
                 );
@@ -100,23 +99,18 @@ async fn main() -> IgResult<()> {
         }
     }
 
-    // Display the results in a table format
-    info!(
-        "\n{:<40} {:<15} {:<10} {:<10} {:<10} {:<10} {:<20} {:<15}",
-        "INSTRUMENT NAME", "EPIC", "BID", "OFFER", "MID", "SPREAD", "LAST DEALING DATE", "HIGH/LOW"
-    );
-    info!(
-        "{:-<40} {:-<15} {:-<10} {:-<10} {:-<10} {:-<10} {:-<20} {:-<15}",
-        "", "", "", "", "", "", "", ""
-    );
+    // Create MultipleMarketDetailsResponse from collected details
+    let market_details_only: Vec<MarketDetails> = market_details_vec
+        .iter()
+        .map(|(_, details)| details.clone())
+        .collect();
 
-    // Sort the results by instrument name for better readability
-    market_details_vec.sort_by(|(_, a), (_, b)| {
-        a.instrument
-            .name
-            .to_lowercase()
-            .cmp(&b.instrument.name.to_lowercase())
-    });
+    let response = MultipleMarketDetailsResponse {
+        market_details: market_details_only,
+    };
+
+    // Display the results using the Display trait
+    info!("\n{}", response);
 
     // Save the final results to JSON
     let json_data = market_details_vec.iter()
@@ -135,72 +129,11 @@ async fn main() -> IgResult<()> {
         })
         .collect::<Vec<_>>();
 
-    let json =
-        serde_json::to_string_pretty(&json_data).map_err(|e| Box::new(e) as Box<dyn Error>)?;
-
-    // Display the results in the console
-    for (epic, details) in &market_details_vec {
-        // Calculate MID and SPREAD values
-        let mid = match (details.snapshot.bid, details.snapshot.offer) {
-            (Some(bid), Some(offer)) => Some((bid + offer) / 2.0),
-            _ => None,
-        };
-
-        let spread = match (details.snapshot.bid, details.snapshot.offer) {
-            (Some(bid), Some(offer)) => Some(offer - bid),
-            _ => None,
-        };
-
-        // Format high/low as "high/low"
-        let high_low = format!(
-            "{}/{}",
-            details
-                .snapshot
-                .high
-                .map(|h| h.to_string())
-                .unwrap_or_else(|| "-".to_string()),
-            details
-                .snapshot
-                .low
-                .map(|l| l.to_string())
-                .unwrap_or_else(|| "-".to_string())
-        );
-
-        // Get the last dealing date from expiry_details if available
-        let last_dealing_date = details
-            .instrument
-            .expiry_details
-            .as_ref()
-            .map(|ed| truncate(&ed.last_dealing_date, 18))
-            .unwrap_or_else(|| truncate(&details.instrument.expiry, 18));
-
-        info!(
-            "{:<40} {:<15} {:<10} {:<10} {:<10} {:<10} {:<20} {:<15}",
-            truncate(&details.instrument.name, 38),
-            truncate(epic, 13),
-            details
-                .snapshot
-                .bid
-                .map(|b| b.to_string())
-                .unwrap_or_else(|| "-".to_string()),
-            details
-                .snapshot
-                .offer
-                .map(|o| o.to_string())
-                .unwrap_or_else(|| "-".to_string()),
-            mid.map(|m| format!("{:.2}", m))
-                .unwrap_or_else(|| "-".to_string()),
-            spread
-                .map(|s| format!("{:.2}", s))
-                .unwrap_or_else(|| "-".to_string()),
-            last_dealing_date,
-            high_low
-        );
-    }
+    let json = serde_json::to_string_pretty(&json_data)?;
 
     // Save the results to a file
     let filename = "Data/market_details.json".to_string();
-    std::fs::write(&filename, &json).map_err(|e| Box::new(e) as Box<dyn Error>)?;
+    std::fs::write(&filename, &json)?;
     info!("Results saved to '{}'", filename);
     info!(
         "Successfully processed {} out of {} EPICs",
@@ -209,13 +142,4 @@ async fn main() -> IgResult<()> {
     );
 
     Ok(())
-}
-
-// Helper function to truncate strings to a maximum length
-fn truncate(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
-        s.to_string()
-    } else {
-        format!("{}...", &s[0..max_len - 3])
-    }
 }

@@ -59,7 +59,7 @@ impl MarketService for Client {
         epics: &[String],
     ) -> Result<MultipleMarketDetailsResponse, AppError> {
         if epics.is_empty() {
-            return Ok(Vec::new());
+            return Ok(MultipleMarketDetailsResponse::default());
         } else if epics.len() > 50 {
             return Err(AppError::InvalidInput(
                 "The maximum number of EPICs is 50".to_string(),

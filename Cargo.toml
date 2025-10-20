@@ -45,6 +45,7 @@ rand = { workspace = true}
 nanoid = { workspace = true}
 pretty-simple-display = { workspace = true}
 governor = { workspace = true}
+prettytable-rs = { workspace = true}
 
 [dev-dependencies]
 assert-json-diff = "2.0"
@@ -105,3 +106,4 @@ rand = "0.9"
 nanoid = "0.4"
 pretty-simple-display = "0.1"
 governor = "0.10"
+prettytable-rs = "0.10"
