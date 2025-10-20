@@ -31,6 +31,13 @@ where
     }
 }
 
+/// Gets an environment variable and parses it, returning None if not found or invalid
+///
+/// # Arguments
+/// * `env_var` - Name of the environment variable
+///
+/// # Returns
+/// Parsed value if found and valid, None otherwise
 pub fn get_env_or_none<T: FromStr>(env_var: &str) -> Option<T>
 where
     <T as FromStr>::Err: Debug,

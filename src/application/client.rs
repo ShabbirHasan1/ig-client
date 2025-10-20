@@ -28,11 +28,19 @@ use serde_json::Value;
 use std::sync::Arc;
 use tracing::{debug, info};
 
+/// Main client for interacting with IG Markets API
+///
+/// This client provides a unified interface for all IG Markets API operations,
+/// including market data, account management, and order execution.
 pub struct Client {
     http_client: Arc<HttpClient>,
 }
 
 impl Client {
+    /// Creates a new client instance
+    ///
+    /// # Returns
+    /// A new Client with default configuration
     pub fn new() -> Self {
         let http_client = Arc::new(HttpClient::default());
         Self { http_client }

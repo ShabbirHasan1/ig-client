@@ -1,3 +1,4 @@
+/// Configuration utilities
 pub mod config;
 /// Module containing financial calculation utilities
 pub mod finance;

@@ -56,6 +56,13 @@ pub trait MarketService: Send + Sync {
         end_date: &str,
     ) -> Result<HistoricalPricesResponse, AppError>;
 
+    /// Gets recent historical prices with custom parameters
+    ///
+    /// # Arguments
+    /// * `params` - Request parameters including epic, resolution, and date range
+    ///
+    /// # Returns
+    /// Historical price data for the specified parameters
     async fn get_recent_prices(
         &self,
         params: &RecentPricesRequest<'_>,

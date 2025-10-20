@@ -61,5 +61,7 @@ pub use crate::utils::*;
 pub use async_trait::async_trait;
 pub use serde::{Deserialize, Serialize};
 
-// Result type alias for convenience
+/// Result type alias for IG client operations
+///
+/// This is a convenience type alias that uses `AppError` as the error type
 pub type IgResult<T> = Result<T, AppError>;

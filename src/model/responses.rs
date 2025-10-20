@@ -17,6 +17,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Database entry response for market instruments
 #[derive(
     DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default,
 )]
@@ -90,8 +91,10 @@ impl From<&MarketData> for DBEntryResponse {
     }
 }
 
+/// Response containing multiple market details
 #[derive(DebugPretty, Clone, Serialize, Deserialize, Default)]
 pub struct MultipleMarketDetailsResponse {
+    /// List of market details
     #[serde(rename = "marketDetails")]
     pub market_details: Vec<MarketDetails>,
 }
@@ -552,6 +555,7 @@ pub struct MarketNavigationResponse {
     pub markets: Vec<MarketData>,
 }
 
+/// Response containing user accounts
 #[derive(Debug, Clone, Deserialize)]
 pub struct AccountsResponse {
     /// List of accounts owned by the user
