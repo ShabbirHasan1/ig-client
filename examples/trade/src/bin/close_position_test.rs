@@ -1,45 +1,15 @@
-use ig_client::application::models::order::{
-    ClosePositionRequest, CreateOrderRequest, Direction, Status,
-};
-use ig_client::application::services::account_service::AccountServiceImpl;
-use ig_client::application::services::order_service::OrderServiceImpl;
-use ig_client::application::services::{AccountService, OrderService};
-use ig_client::utils::rate_limiter::RateLimitType;
-use ig_client::{
-    config::Config, session::auth::IgAuth, session::interface::IgAuthenticator,
-    transport::http_client::IgHttpClientImpl, utils::logger::setup_logger,
-};
+use ig_client::prelude::*;
 use nanoid::nanoid;
-use std::sync::Arc;
 use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::TradingAccount,
-        0.9,
-    ));
+    info!("=== IG Close Position Test ===");
 
-    info!("Configuration loaded");
-
-    // Create HTTP client
-    let client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
-    info!("HTTP client created");
-
-    // Create authenticator
-    let authenticator = IgAuth::new(&config);
-    info!("Authenticator created");
-
-    // Login to IG
-    info!("Logging in to IG...");
-    let session = authenticator.login().await?;
-    info!("Session started successfully");
-
-    // Create services
-    let order_service = OrderServiceImpl::new(Arc::clone(&config), Arc::clone(&client));
-    let account_service = AccountServiceImpl::new(Arc::clone(&config), Arc::clone(&client));
+    // Create client
+    let client = Client::default();
 
     let epic = "DO.D.OTCDSTXE.GG.IP"; // Example epic for testing
     let expiry = Some(
@@ -68,15 +38,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         currency_code.clone(),
     );
 
-    let deal_id1 = match order_service.create_order(&session, &create_order1).await {
+    let deal_id1 = match client.create_order(&create_order1).await {
         Ok(response) => {
             info!(
                 "Order created with deal reference: {}",
                 response.deal_reference
             );
 
-            let confirmation = order_service
-                .get_order_confirmation(&session, &response.deal_reference)
+            let confirmation = client
+                .get_order_confirmation(&response.deal_reference)
                 .await?;
 
             info!(
@@ -108,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(deal_id) = &deal_id1 {
         // Step 2: Check positions to verify order became position
         info!("Checking positions to verify order became position...");
-        let positions_before = account_service.get_positions(&session).await?;
+        let positions_before = client.get_positions().await?;
         info!(
             "Positions before close: {}",
             positions_before.positions.len()
@@ -142,15 +112,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             size,
         );
 
-        match order_service.close_position(&session, &close_request).await {
+        match client.close_position(&close_request).await {
             Ok(close_response) => {
                 info!(
                     "Close order created with deal reference: {}",
                     close_response.deal_reference
                 );
 
-                let close_confirmation = order_service
-                    .get_order_confirmation(&session, &close_response.deal_reference)
+                let close_confirmation = client
+                    .get_order_confirmation(&close_response.deal_reference)
                     .await?;
 
                 info!(
@@ -160,7 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Step 4: Verify position is gone
                 tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-                let positions_after = account_service.get_positions(&session).await?;
+                let positions_after = client.get_positions().await?;
                 info!("Positions after close: {}", positions_after.positions.len());
 
                 let position_exists = positions_after
@@ -204,10 +174,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         currency_code.clone(),
     );
 
-    let _deal_id2a = match order_service.create_order(&session, &create_order2a).await {
+    let _deal_id2a = match client.create_order(&create_order2a).await {
         Ok(response) => {
-            let confirmation = order_service
-                .get_order_confirmation(&session, &response.deal_reference)
+            let confirmation = client
+                .get_order_confirmation(&response.deal_reference)
                 .await?;
             info!(
                 "First order - Status: {:?}, Deal ID: {:?}",
@@ -239,10 +209,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         currency_code.clone(),
     );
 
-    let _deal_id2b = match order_service.create_order(&session, &create_order2b).await {
+    let _deal_id2b = match client.create_order(&create_order2b).await {
         Ok(response) => {
-            let confirmation = order_service
-                .get_order_confirmation(&session, &response.deal_reference)
+            let confirmation = client
+                .get_order_confirmation(&response.deal_reference)
                 .await?;
             info!(
                 "Second order - Status: {:?}, Deal ID: {:?}",
@@ -259,7 +229,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 3: Check positions to verify orders became positions
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     info!("Checking positions to verify orders became positions...");
-    let positions_before_flow2 = account_service.get_positions(&session).await?;
+    let positions_before_flow2 = client.get_positions().await?;
     info!(
         "Total positions before close: {}",
         positions_before_flow2.positions.len()
@@ -292,18 +262,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             total_size,
         );
 
-        match order_service
-            .close_position(&session, &close_request_epic)
-            .await
-        {
+        match client.close_position(&close_request_epic).await {
             Ok(close_response) => {
                 info!(
                     "Epic close order created with deal reference: {}",
                     close_response.deal_reference
                 );
 
-                let close_confirmation = order_service
-                    .get_order_confirmation(&session, &close_response.deal_reference)
+                let close_confirmation = client
+                    .get_order_confirmation(&close_response.deal_reference)
                     .await?;
 
                 info!(
@@ -313,7 +280,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Step 5: Verify positions are gone
                 tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-                let positions_after_flow2 = account_service.get_positions(&session).await?;
+                let positions_after_flow2 = client.get_positions().await?;
                 info!(
                     "Total positions after epic close: {}",
                     positions_after_flow2.positions.len()

@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 19/10/25
 ******************************************************************************/
+use crate::application::auth::WebsocketInfo;
 use crate::application::interfaces::account::AccountService;
 use crate::application::interfaces::market::MarketService;
 use crate::application::interfaces::order::OrderService;
@@ -45,6 +46,10 @@ impl Client {
     pub fn new() -> Self {
         let http_client = Arc::new(HttpClient::default());
         Self { http_client }
+    }
+
+    pub async fn get_ws_info(&self) -> WebsocketInfo {
+        self.http_client.get_ws_info().await
     }
 }
 

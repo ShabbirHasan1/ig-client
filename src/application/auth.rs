@@ -18,13 +18,47 @@ use crate::error::AppError;
 pub(crate) use crate::model::auth::{OAuthToken, SecurityHeaders, SessionResponse};
 use crate::model::http::make_http_request;
 use crate::model::retry::RetryConfig;
+use crate::prelude::Deserialize;
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use reqwest::{Client, Method};
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 const USER_AGENT: &str = "ig-client/0.6.0";
+
+/// WebSocket connection information for Lightstreamer
+///
+/// Contains the necessary credentials and endpoint information
+/// to establish a WebSocket connection to IG's Lightstreamer service.
+#[derive(DebugPretty, Clone, Default, Serialize, Deserialize, DisplaySimple)]
+pub struct WebsocketInfo {
+    /// Lightstreamer endpoint URL
+    pub server: String,
+    /// CST token for authentication (API v2)
+    pub cst: Option<String>,
+    /// X-SECURITY-TOKEN for authentication (API v2)
+    pub x_security_token: Option<String>,
+    pub account_id: String,
+}
+
+impl WebsocketInfo {
+    /// Generates the WebSocket password for Lightstreamer authentication
+    ///
+    /// # Returns
+    /// * Password in format "CST-{cst}|XST-{token}" if both tokens are available
+    /// * Empty string if tokens are not available
+    pub fn get_ws_password(&self) -> String {
+        match (&self.cst, &self.x_security_token) {
+            (Some(cst), Some(x_security_token)) => {
+                format!("CST-{}|XST-{}", cst, x_security_token)
+            }
+            _ => String::new(),
+        }
+    }
+}
 
 /// Session information for authenticated requests
 #[derive(Debug, Clone)]
@@ -89,6 +123,20 @@ impl Session {
     pub fn needs_token_refresh(&self, margin_seconds: Option<u64>) -> bool {
         self.is_expired(margin_seconds)
     }
+
+    /// Extracts WebSocket connection information from the session
+    ///
+    /// # Returns
+    /// * `WebsocketInfo` containing endpoint and authentication tokens
+    #[must_use]
+    pub fn get_websocket_info(&self) -> WebsocketInfo {
+        WebsocketInfo {
+            server: self.lightstreamer_endpoint.clone() + "/lightstreamer",
+            cst: self.cst.clone(),
+            x_security_token: self.x_security_token.clone(),
+            account_id: self.account_id.clone(),
+        }
+    }
 }
 
 impl From<SessionResponse> for Session {
@@ -130,6 +178,18 @@ impl Auth {
             client,
             session: Arc::new(RwLock::new(None)),
             rate_limiter,
+        }
+    }
+
+    /// Gets the WebSocket password for Lightstreamer authentication
+    ///
+    /// # Returns
+    /// * WebSocket password in format "CST-{cst}|XST-{token}" or empty string if session is not available
+    pub async fn get_ws_info(&self) -> WebsocketInfo {
+        let sess = self.login_v2().await.ok();
+        match sess {
+            Some(sess) => sess.get_websocket_info(),
+            None => WebsocketInfo::default(),
         }
     }
 

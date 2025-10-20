@@ -1,61 +1,19 @@
-use ig_client::application::services::AccountService;
-use ig_client::utils::rate_limiter::RateLimitType;
-use ig_client::{
-    application::services::account_service::AccountServiceImpl, config::Config,
-    session::auth::IgAuth, session::interface::IgAuthenticator,
-    transport::http_client::IgHttpClientImpl, utils::finance::calculate_pnl,
-    utils::logger::setup_logger,
-};
-use std::sync::Arc;
+use ig_client::prelude::*;
+use ig_client::utils::finance::calculate_pnl;
 use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
-    // Create configuration using the default Config implementation
-    // This will read from environment variables as defined in src/config.rs
-    // Using NonTradingAccount rate limit for demo accounts
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::NonTradingAccount,
-        0.7,
-    ));
-    info!("Configuration loaded → {}", config.rest_api.base_url);
+    info!("=== IG Positions Example ===");
 
-    // Create HTTP client
-    let http_client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
-    info!("HTTP client created");
-
-    // Create authenticator
-    let authenticator = IgAuth::new(&config);
-    info!("Authenticator created");
-
-    // Login to IG and switch to the configured account if needed
-    info!("Logging in to IG...");
-    let session = if !config.credentials.account_id.trim().is_empty() {
-        info!(
-            "Using login_and_switch_account for account: {}",
-            config.credentials.account_id
-        );
-        authenticator
-            .login_and_switch_account(&config.credentials.account_id, Some(false))
-            .await?
-    } else {
-        info!("Using standard login");
-        authenticator.login().await?
-    };
-    info!(
-        "Session started successfully for account: {}",
-        session.account_id
-    );
-
-    // Create account service
-    let account_service = AccountServiceImpl::new(Arc::clone(&config), Arc::clone(&http_client));
-    info!("Account service created");
+    // Create client
+    let client = Client::default();
 
     // Get open positions
     info!("Fetching open positions...");
-    let mut positions = account_service.get_positions(&session).await?;
+    let mut positions = client.get_positions().await?;
 
     if positions.positions.is_empty() {
         info!("No open positions currently");
@@ -78,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get working orders
     info!("Fetching working orders...");
-    let working_orders = account_service.get_working_orders(&session).await?;
+    let working_orders = client.get_working_orders().await?;
 
     if working_orders.working_orders.is_empty() {
         info!("No working orders currently");

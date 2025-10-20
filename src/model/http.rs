@@ -4,7 +4,7 @@
    Date: 20/10/25
 ******************************************************************************/
 
-use crate::application::auth::{Auth, Session};
+use crate::application::auth::{Auth, Session, WebsocketInfo};
 use crate::application::config::Config;
 use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
@@ -86,6 +86,10 @@ impl HttpClient {
             config,
             rate_limiter,
         }
+    }
+
+    pub async fn get_ws_info(&self) -> WebsocketInfo {
+        self.auth.get_ws_info().await
     }
 
     /// Makes a GET request

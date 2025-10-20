@@ -47,6 +47,7 @@ pub use crate::presentation::market::{MarketData, MarketDetails, MarketNode};
 
 pub use crate::presentation::account::{Account, AccountBalance, AccountInfo, Activity};
 
+pub use crate::presentation::chart::ChartData;
 pub use crate::presentation::trade::{
     OpenPositionUpdate, TradeData, TradeFields, WorkingOrderUpdate,
 };

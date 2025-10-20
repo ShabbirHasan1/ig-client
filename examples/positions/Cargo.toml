@@ -3,6 +3,18 @@ name = "examples_positions"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "positions_example"
+path = "src/bin/positions_example.rs"
+
+[[bin]]
+name = "positions_switch_account"
+path = "src/bin/positions_switch_account.rs"
+
+[[bin]]
+name = "positions_switch_account_v2"
+path = "src/bin/positions_switch_account_v2.rs"
+
 [dependencies]
 ig-client = { workspace = true }
 tracing = { workspace = true }
