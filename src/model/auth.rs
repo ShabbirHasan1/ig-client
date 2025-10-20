@@ -57,7 +57,7 @@ impl SessionResponse {
     }
     pub fn get_session_v2(&mut self, headers: &SecurityHeaders) -> Session {
         match self { 
-            SessionResponse::V3(v) => {
+            SessionResponse::V3(_) => {
                 warn!("Returing V3 session from V2 headers - this may be unexpected");
                 self.get_session()
             },

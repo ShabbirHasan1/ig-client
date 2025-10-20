@@ -19,7 +19,6 @@ use crate::model::http::make_http_request;
 use crate::model::retry::RetryConfig;
 use chrono::Utc;
 use reqwest::{Client, Method};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
@@ -149,7 +148,7 @@ impl Auth {
             // Check if OAuth token needs refresh
             if sess.needs_token_refresh(Some(300)) {
                 drop(session); // Release read lock
-                info!("OAuth token needs refresh");
+                debug!("OAuth token needs refresh");
                 return self.refresh_token().await;
             }
             return Ok(sess.clone());
@@ -172,7 +171,7 @@ impl Auth {
     pub async fn login(&self) -> Result<Session, AppError> {
         let api_version = self.config.api_version.unwrap_or(2);
 
-        info!("Logging in with API v{}", api_version);
+        debug!("Logging in with API v{}", api_version);
 
         let session = if api_version == 3 {
             self.login_oauth().await?

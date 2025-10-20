@@ -116,7 +116,6 @@ pub async fn make_http_request<B: Serialize>(
     loop {
         // Wait for rate limiter before making request
         {
-            println!("Request arrived!");
             let limiter = rate_limiter.read().await;
             limiter.wait().await;
         }
