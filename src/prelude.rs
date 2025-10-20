@@ -61,6 +61,10 @@ pub use crate::utils::*;
 pub use async_trait::async_trait;
 pub use serde::{Deserialize, Serialize};
 
+pub use crate::storage::market_database::MarketDatabaseService;
+pub use crate::storage::utils::{create_connection_pool, create_database_config_from_env};
+pub use crate::model::utils::{build_market_hierarchy, extract_markets_from_hierarchy};
+
 /// Result type alias for IG client operations
 ///
 /// This is a convenience type alias that uses `AppError` as the error type

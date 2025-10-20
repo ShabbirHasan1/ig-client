@@ -72,10 +72,9 @@ path = "benches/benchmarks.rs"
 
 [workspace]
 members = [
-#    "examples/account",
 #    "examples/chart",
     "examples/market",
-#    "examples/orders",
+    "examples/orders",
 #    "examples/trade",
 #    "examples/transactions",
 #    "examples/positions",

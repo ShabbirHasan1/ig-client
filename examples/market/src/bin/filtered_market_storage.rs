@@ -1,9 +1,7 @@
-use ig_client::utils::logger::setup_logger;
+use ig_client::prelude::*;
 use std::collections::HashMap;
 use std::{error::Error, fs};
 use tracing::info;
-use ig_client::prelude::*;
-use ig_client::presentation::market::MarketNode;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

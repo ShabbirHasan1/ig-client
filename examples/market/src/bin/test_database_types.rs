@@ -1,10 +1,12 @@
-use ig_client::storage::market_database::MarketDatabaseService;
-use ig_client::storage::utils::{create_connection_pool, create_database_config_from_env};
+use tracing::info;
+use ig_client::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logger();
+    
     // Initialize simple logging
-    println!("Testing database types compatibility...");
+    info!("Testing database types compatibility...");
 
     // Create database connection
     let db_config = create_database_config_from_env()?;
@@ -15,18 +17,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize database
     db_service.initialize_database().await?;
-    println!("Database initialized successfully");
+    info!("Database initialized successfully");
 
     // Test searching (this will test f64 <-> DOUBLE PRECISION compatibility)
-    println!("Testing search functionality...");
+    info!("Testing search functionality...");
     let search_results = db_service.search_instruments("Germany").await?;
-    println!(
+    info!(
         "Search completed successfully. Found {} results",
         search_results.len()
     );
 
     for result in &search_results {
-        println!(
+        info!(
             "Found instrument: {} - {} (bid: {:?}, offer: {:?})",
             result.epic, result.instrument_name, result.bid, result.offer
         );
@@ -34,12 +36,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test statistics
     let stats = db_service.get_statistics().await?;
-    println!(
+    info!(
         "Database statistics: {} nodes, {} instruments",
         stats.node_count, stats.instrument_count
     );
 
-    println!("All tests completed successfully! f64 <-> DOUBLE PRECISION compatibility confirmed.");
+    info!("All tests completed successfully! f64 <-> DOUBLE PRECISION compatibility confirmed.");
 
     Ok(())
 }
