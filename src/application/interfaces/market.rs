@@ -1,75 +1,11 @@
-use crate::application::models::market::{
-    HistoricalPricesResponse, MarketDetails, MarketNavigationResponse, MarketSearchResult,
-};
-use crate::application::services::types::DBEntry;
+
 use crate::error::AppError;
-use crate::session::interface::IgSession;
 use async_trait::async_trait;
+use crate::model::requests::RecentPricesRequest;
+use crate::model::responses::DBEntryResponse;
+use crate::presentation::market::{HistoricalPricesResponse, MarketData, MarketDetails, MarketNavigationResponse, MarketSearchResult};
 
-/// Parameters for getting recent prices (API v3)
-#[derive(Debug, Clone, Default)]
-pub struct RecentPricesParams<'a> {
-    /// Instrument epic
-    pub epic: &'a str,
-    /// Optional price resolution (default: MINUTE)
-    pub resolution: Option<&'a str>,
-    /// Optional start date time (yyyy-MM-dd'T'HH:mm:ss)
-    pub from: Option<&'a str>,
-    /// Optional end date time (yyyy-MM-dd'T'HH:mm:ss)
-    pub to: Option<&'a str>,
-    /// Optional max number of price points (default: 10)
-    pub max_points: Option<i32>,
-    /// Optional page size (default: 20, disable paging = 0)
-    pub page_size: Option<i32>,
-    /// Optional page number (default: 1)
-    pub page_number: Option<i32>,
-}
 
-impl<'a> RecentPricesParams<'a> {
-    /// Create new parameters with just the epic (required field)
-    pub fn new(epic: &'a str) -> Self {
-        Self {
-            epic,
-            ..Default::default()
-        }
-    }
-
-    /// Set the resolution
-    pub fn with_resolution(mut self, resolution: &'a str) -> Self {
-        self.resolution = Some(resolution);
-        self
-    }
-
-    /// Set the from date
-    pub fn with_from(mut self, from: &'a str) -> Self {
-        self.from = Some(from);
-        self
-    }
-
-    /// Set the to date
-    pub fn with_to(mut self, to: &'a str) -> Self {
-        self.to = Some(to);
-        self
-    }
-
-    /// Set the max points
-    pub fn with_max_points(mut self, max_points: i32) -> Self {
-        self.max_points = Some(max_points);
-        self
-    }
-
-    /// Set the page size
-    pub fn with_page_size(mut self, page_size: i32) -> Self {
-        self.page_size = Some(page_size);
-        self
-    }
-
-    /// Set the page number
-    pub fn with_page_number(mut self, page_number: i32) -> Self {
-        self.page_number = Some(page_number);
-        self
-    }
-}
 
 /// Interface for the market service
 #[async_trait]
@@ -77,14 +13,12 @@ pub trait MarketService: Send + Sync {
     /// Searches markets by search term
     async fn search_markets(
         &self,
-        session: &IgSession,
         search_term: &str,
     ) -> Result<MarketSearchResult, AppError>;
 
     /// Gets details of a specific market by its EPIC
     async fn get_market_details(
         &self,
-        session: &IgSession,
         epic: &str,
     ) -> Result<MarketDetails, AppError>;
 
@@ -101,14 +35,12 @@ pub trait MarketService: Send + Sync {
     /// A vector of market details in the same order as the input EPICs
     async fn get_multiple_market_details(
         &self,
-        session: &IgSession,
         epics: &[String],
     ) -> Result<Vec<MarketDetails>, AppError>;
 
     /// Gets historical prices for a market
     async fn get_historical_prices(
         &self,
-        session: &IgSession,
         epic: &str,
         resolution: &str,
         from: &str,
@@ -124,48 +56,16 @@ pub trait MarketService: Send + Sync {
     /// * `end_date` - End date (yyyy-MM-dd HH:mm:ss). Must be later than the start date
     async fn get_historical_prices_by_date_range(
         &self,
-        session: &IgSession,
         epic: &str,
         resolution: &str,
         start_date: &str,
         end_date: &str,
     ) -> Result<HistoricalPricesResponse, AppError>;
 
-    /// Gets recent historical prices for an instrument (API v3)
-    /// Returns minute prices within the last 10 minutes by default
-    ///
-    /// # Arguments
-    /// * `session` - The authenticated IG session
-    /// * `params` - Parameters for the recent prices request
-    ///
-    /// # Example
-    /// ```rust,no_run
-    /// use ig_client::application::services::{MarketService, RecentPricesParams};
-    /// # use ig_client::application::services::market_service::MarketServiceImpl;
-    /// # use ig_client::transport::http_client::IgHttpClientImpl;
-    /// # use ig_client::config::Config;
-    /// # use std::sync::Arc;
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let config = Arc::new(Config::default());
-    /// # let http_client = Arc::new(IgHttpClientImpl::new(config.clone()));
-    /// # let market_service = MarketServiceImpl::new(config, http_client);
-    /// # let session = ig_client::session::interface::IgSession::new(
-    /// #     "cst_token".to_string(),
-    /// #     "security_token".to_string(),
-    /// #     "account_id".to_string()
-    /// # );
-    ///
-    /// let params = RecentPricesParams::new("CS.D.EURUSD.TODAY.IP")
-    ///     .with_resolution("MINUTE_5")
-    ///     .with_max_points(10);
-    /// let prices = market_service.get_recent_prices(&session, &params).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+
     async fn get_recent_prices(
         &self,
-        session: &IgSession,
-        params: &RecentPricesParams<'_>,
+        params: &RecentPricesRequest<'_>,
     ) -> Result<HistoricalPricesResponse, AppError>;
 
     /// Gets historical prices by number of data points (API v1)
@@ -176,7 +76,7 @@ pub trait MarketService: Send + Sync {
     /// * `num_points` - Number of data points required
     async fn get_historical_prices_by_count_v1(
         &self,
-        session: &IgSession,
+        
         epic: &str,
         resolution: &str,
         num_points: i32,
@@ -190,7 +90,6 @@ pub trait MarketService: Send + Sync {
     /// * `num_points` - Number of data points required
     async fn get_historical_prices_by_count_v2(
         &self,
-        session: &IgSession,
         epic: &str,
         resolution: &str,
         num_points: i32,
@@ -202,7 +101,6 @@ pub trait MarketService: Send + Sync {
     /// to navigate through the available markets.
     async fn get_market_navigation(
         &self,
-        session: &IgSession,
     ) -> Result<MarketNavigationResponse, AppError>;
 
     /// Gets the market navigation node with the specified ID
@@ -213,7 +111,6 @@ pub trait MarketService: Send + Sync {
     /// * `node_id` - The ID of the navigation node to retrieve
     async fn get_market_navigation_node(
         &self,
-        session: &IgSession,
         node_id: &str,
     ) -> Result<MarketNavigationResponse, AppError>;
 
@@ -231,8 +128,8 @@ pub trait MarketService: Send + Sync {
     /// * `Result<Vec<MarketData>, AppError>` - Vector containing all found market instruments
     async fn get_all_markets(
         &self,
-        session: &IgSession,
-    ) -> Result<Vec<crate::application::models::market::MarketData>, AppError>;
+        
+    ) -> Result<Vec<MarketData>, AppError>;
 
     /// Gets all markets converted to database entries format
     ///
@@ -244,5 +141,5 @@ pub trait MarketService: Send + Sync {
     ///
     /// # Returns
     /// * `Result<Vec<DBEntry>, AppError>` - Vector of database entries representing all markets
-    async fn get_vec_db_entries(&self, session: &IgSession) -> Result<Vec<DBEntry>, AppError>;
+    async fn get_vec_db_entries(&self) -> Result<Vec<DBEntryResponse>, AppError>;
 }

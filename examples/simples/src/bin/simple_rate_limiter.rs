@@ -1,4 +1,4 @@
-use ig_client::application::client::Client;
+use ig_client::application::client::{Client};
 use ig_client::utils::setup_logger;
 /// Example demonstrating rate limiting with automatic retry on rate limit exceeded
 ///
@@ -19,6 +19,8 @@ use ig_client::utils::setup_logger;
 use serde_json::Value;
 use std::time::Instant;
 use tracing::info;
+use ig_client::application::interfaces::market::MarketService;
+use ig_client::presentation::market::MarketDetails;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,31 +33,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create client - authentication happens automatically
     info!("Creating client and authenticating...");
     let client = Client::default();
-    info!("✓ Client created and authenticated");
-
-    // Get session info
-    let session = client.get_session().await?;
-    info!("✓ Logged in as account: {}", session.account_id);
-    if session.is_oauth() {
-        info!("  Using OAuth (API v3)");
-    } else {
-        info!("  Using CST/X-SECURITY-TOKEN (API v2)");
-    }
-
-    // Make multiple API calls to demonstrate rate limiting
-    info!("\n=== Testing Rate Limiter ===\n");
-    info!("Making 20 requests to /markets/OP.D.OTCGC3.4050C.IP");
-    info!("Watch how the rate limiter controls the request rate...\n");
-
     let epic = "OP.D.OTCGC3.4050C.IP";
-    let market_path = format!("/markets/{}", epic);
-
     let start = Instant::now();
     let num_requests = 20;
 
     for i in 1..=num_requests {
         let request_start = Instant::now();
-        let _market: Value = client.get(&market_path).await?;
+        let _market: MarketDetails = client.get_market_details(&epic).await?;
         let request_duration = request_start.elapsed();
 
         info!(

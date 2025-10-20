@@ -4,13 +4,6 @@
    Date: 20/10/25
 ******************************************************************************/
 
-//! HTTP request utilities with rate limiting and automatic retry
-//!
-//! This module provides a common HTTP request function that handles:
-//! - Rate limiting before each request
-//! - Automatic retry on rate limit exceeded errors
-//! - Consistent error handling
-//! - Support for all HTTP methods
 
 use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
@@ -20,6 +13,222 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
+use crate::application::auth::{Auth, Session};
+use crate::application::config::Config;
+use reqwest::{Client as HttpInternalClient };
+use serde::de::DeserializeOwned;
+
+const USER_AGENT: &str = "ig-client/0.6.0";
+
+/// Simplified client for IG Markets API with automatic authentication
+///
+/// This client handles all authentication complexity internally, including:
+/// - Initial login
+/// - OAuth token refresh
+/// - Re-authentication when tokens expire
+/// - Account switching
+/// - Rate limiting for all API requests
+pub struct HttpClient {
+    auth: Arc<Auth>,
+    http_client: HttpInternalClient,
+    config: Arc<Config>,
+    rate_limiter: Arc<RwLock<RateLimiter>>,
+}
+
+impl HttpClient {
+    /// Creates a new client and performs initial authentication
+    ///
+    /// # Arguments
+    /// * `config` - Configuration containing credentials and API settings
+    ///
+    /// # Returns
+    /// * `Ok(Client)` - Authenticated client ready to use
+    /// * `Err(AppError)` - If authentication fails
+    pub async fn new(config: Config) -> Result<Self, AppError> {
+        let config = Arc::new(config);
+
+        // Create HTTP client and rate limiter first
+        let http_client = HttpInternalClient::builder().user_agent(USER_AGENT).build()?;
+        let rate_limiter = Arc::new(RwLock::new(RateLimiter::new(&config.rate_limiter)));
+
+        // Create Auth instance
+        let auth = Arc::new(Auth::new(config.clone()));
+
+        // Perform initial login
+        auth.login().await?;
+
+        Ok(Self {
+            auth,
+            http_client,
+            config,
+            rate_limiter,
+        })
+    }
+
+    /// Creates a new client without performing initial authentication
+    pub fn new_lazy(config: Config) -> Self {
+        let config = Arc::new(config);
+
+        // Create HTTP client and rate limiter first
+        let http_client = HttpInternalClient::builder()
+            .user_agent(USER_AGENT)
+            .build()
+            .expect("Failed to create HTTP client");
+        let rate_limiter = Arc::new(RwLock::new(RateLimiter::new(&config.rate_limiter)));
+
+        // Create Auth instance
+        let auth = Arc::new(Auth::new(config.clone()));
+
+        Self {
+            auth,
+            http_client,
+            config,
+            rate_limiter,
+        }
+    }
+
+    /// Makes a GET request
+    pub async fn get<T: DeserializeOwned>(&self, path: &str, version: Option<u8>,) -> Result<T, AppError> {
+        self.request(Method::GET, path, None::<()>, version).await
+    }
+
+    /// Makes a POST request
+    pub async fn post<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: B,
+    ) -> Result<T, AppError> {
+        self.request(Method::POST, path, Some(body), None).await
+    }
+
+    /// Makes a PUT request
+    pub async fn put<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: B,
+    ) -> Result<T, AppError> {
+        self.request(Method::PUT, path, Some(body), None).await
+    }
+
+    /// Makes a DELETE request
+    pub async fn delete<T: DeserializeOwned>(&self, path: &str) -> Result<T, AppError> {
+        self.request(Method::DELETE, path, None::<()>, None).await
+    }
+
+    /// Makes a request with custom API version
+    pub async fn request<B: Serialize, T: DeserializeOwned>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<B>,
+        version: Option<u8>,
+    ) -> Result<T, AppError> {
+        match self.request_internal(method.clone(), path, &body, version).await {
+            Ok(response) => self.parse_response(response).await,
+            Err(AppError::OAuthTokenExpired) => {
+                warn!("OAuth token expired, refreshing and retrying");
+                self.auth.refresh_token().await?;
+                let response = self.request_internal(method, path, &body, version).await?;
+                self.parse_response(response).await
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Internal method to make HTTP requests
+    async fn request_internal<B: Serialize>(
+        &self,
+        method: Method,
+        path: &str,
+        body: &Option<B>,
+        version: Option<u8>,
+    ) -> Result<Response, AppError> {
+        let session = self.auth.get_session().await?;
+
+        let url = if path.starts_with("http") {
+            path.to_string()
+        } else {
+            let path = path.trim_start_matches('/');
+            format!("{}/{}", self.config.rest_api.base_url, path)
+        };
+
+        let api_key = self.config.credentials.api_key.clone();
+        let version_owned = version.unwrap_or(1).to_string();
+        let auth_header_value;
+        let account_id;
+        let cst;
+        let x_security_token;
+
+        let mut headers = vec![
+            ("X-IG-API-KEY", api_key.as_str()),
+            ("Content-Type", "application/json; charset=UTF-8"),
+            ("Accept", "application/json; charset=UTF-8"),
+            ("Version", version_owned.as_str()),
+        ];
+
+        if let Some(oauth) = &session.oauth_token {
+            auth_header_value = format!("Bearer {}", oauth.access_token);
+            account_id = session.account_id.clone();
+            headers.push(("Authorization", auth_header_value.as_str()));
+            headers.push(("IG-ACCOUNT-ID", account_id.as_str()));
+        } else {
+            if let (Some(cst_val), Some(token_val)) = (&session.cst, &session.x_security_token) {
+                cst = cst_val.clone();
+                x_security_token = token_val.clone();
+                headers.push(("CST", cst.as_str()));
+                headers.push(("X-SECURITY-TOKEN", x_security_token.as_str()));
+            }
+        }
+
+        make_http_request(
+            &self.http_client,
+            self.rate_limiter.clone(),
+            method,
+            &url,
+            headers,
+            body,
+            RetryConfig::infinite(),
+        )
+            .await
+    }
+
+    /// Parses response
+    async fn parse_response<T: DeserializeOwned>(&self, response: Response) -> Result<T, AppError> {
+        Ok(response.json().await?)
+    }
+
+    /// Switches to a different trading account
+    pub async fn switch_account(
+        &self,
+        account_id: &str,
+        default_account: Option<bool>,
+    ) -> Result<(), AppError> {
+        self.auth.switch_account(account_id, default_account).await?;
+        Ok(())
+    }
+
+    /// Gets the current session
+    pub async fn get_session(&self) -> Result<Session, AppError> {
+        self.auth.get_session().await
+    }
+
+    /// Logs out
+    pub async fn logout(&self) -> Result<(), AppError> {
+        self.auth.logout().await
+    }
+
+    /// Gets Auth reference
+    pub fn auth(&self) -> &Auth {
+        &self.auth
+    }
+}
+
+impl Default for HttpClient {
+    fn default() -> Self {
+        let config = Config::default();
+        Self::new_lazy(config)
+    }
+}
 
 /// Makes an HTTP request with automatic rate limiting and retry on rate limit errors
 ///

@@ -4,3 +4,5 @@ pub mod client;
 pub mod config;
 /// Rate limiter module for API request throttling
 pub mod rate_limiter;
+
+pub mod interfaces;
