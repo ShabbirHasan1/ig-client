@@ -154,9 +154,9 @@ impl Config {
                 max_connections: get_env_or_default("DATABASE_MAX_CONNECTIONS", 5),
             },
             rate_limiter: RateLimiterConfig {
-                max_requests: get_env_or_default("IG_RATE_LIMIT_MAX_REQUESTS", 29), // 3
-                period_seconds: get_env_or_default("IG_RATE_LIMIT_PERIOD_SECONDS", 60), // 10
-                burst_size: get_env_or_default("IG_RATE_LIMIT_BURST_SIZE", 20),
+                max_requests: get_env_or_default("IG_RATE_LIMIT_MAX_REQUESTS", 4), // 3
+                period_seconds: get_env_or_default("IG_RATE_LIMIT_PERIOD_SECONDS", 12), // 10
+                burst_size: get_env_or_default("IG_RATE_LIMIT_BURST_SIZE", 3),
             },
             sleep_hours,
             page_size,
