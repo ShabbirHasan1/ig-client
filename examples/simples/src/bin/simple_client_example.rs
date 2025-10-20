@@ -1,14 +1,6 @@
 use ig_client::application::client::Client;
 use ig_client::application::interfaces::market::MarketService;
-use ig_client::model::http::HttpClient;
 use ig_client::utils::setup_logger;
-/// Example demonstrating the new simplified Client API
-///
-/// This example shows how easy it is to use the new Client that handles
-/// all authentication and token refresh automatically.
-///
-/// Run with: cargo run --example simple_client_example
-use serde_json::Value;
 use tracing::info;
 
 #[tokio::main]

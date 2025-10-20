@@ -1,4 +1,6 @@
-use ig_client::application::client::{Client};
+use ig_client::application::client::Client;
+use ig_client::application::interfaces::market::MarketService;
+use ig_client::presentation::market::MarketDetails;
 use ig_client::utils::setup_logger;
 /// Example demonstrating rate limiting with automatic retry on rate limit exceeded
 ///
@@ -18,8 +20,6 @@ use ig_client::utils::setup_logger;
 /// Run with: cargo run --bin simple_rate_limiter
 use std::time::Instant;
 use tracing::info;
-use ig_client::application::interfaces::market::MarketService;
-use ig_client::presentation::market::MarketDetails;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for i in 1..=num_requests {
         let request_start = Instant::now();
-        let _market: MarketDetails = client.get_market_details(&epic).await?;
+        let _market: MarketDetails = client.get_market_details(epic).await?;
         let request_duration = request_start.elapsed();
 
         info!(

@@ -13,3 +13,4 @@ pub mod requests;
 pub mod responses;
 /// Retry configuration for HTTP requests
 pub mod retry;
+pub mod utils;

@@ -4,19 +4,18 @@
    Date: 20/10/25
 ******************************************************************************/
 
-
+use crate::application::auth::{Auth, Session};
+use crate::application::config::Config;
 use crate::application::rate_limiter::RateLimiter;
 use crate::error::AppError;
 use crate::model::retry::RetryConfig;
+use reqwest::Client as HttpInternalClient;
 use reqwest::{Client, Method, Response, StatusCode};
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
-use crate::application::auth::{Auth, Session};
-use crate::application::config::Config;
-use reqwest::{Client as HttpInternalClient };
-use serde::de::DeserializeOwned;
 
 const USER_AGENT: &str = "ig-client/0.6.0";
 
@@ -48,7 +47,9 @@ impl HttpClient {
         let config = Arc::new(config);
 
         // Create HTTP client and rate limiter first
-        let http_client = HttpInternalClient::builder().user_agent(USER_AGENT).build()?;
+        let http_client = HttpInternalClient::builder()
+            .user_agent(USER_AGENT)
+            .build()?;
         let rate_limiter = Arc::new(RwLock::new(RateLimiter::new(&config.rate_limiter)));
 
         // Create Auth instance
@@ -88,7 +89,11 @@ impl HttpClient {
     }
 
     /// Makes a GET request
-    pub async fn get<T: DeserializeOwned>(&self, path: &str, version: Option<u8>,) -> Result<T, AppError> {
+    pub async fn get<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        version: Option<u8>,
+    ) -> Result<T, AppError> {
         self.request(Method::GET, path, None::<()>, version).await
     }
 
@@ -123,7 +128,10 @@ impl HttpClient {
         body: Option<B>,
         version: Option<u8>,
     ) -> Result<T, AppError> {
-        match self.request_internal(method.clone(), path, &body, version).await {
+        match self
+            .request_internal(method.clone(), path, &body, version)
+            .await
+        {
             Ok(response) => self.parse_response(response).await,
             Err(AppError::OAuthTokenExpired) => {
                 warn!("OAuth token expired, refreshing and retrying");
@@ -171,13 +179,11 @@ impl HttpClient {
             account_id = session.account_id.clone();
             headers.push(("Authorization", auth_header_value.as_str()));
             headers.push(("IG-ACCOUNT-ID", account_id.as_str()));
-        } else {
-            if let (Some(cst_val), Some(token_val)) = (&session.cst, &session.x_security_token) {
-                cst = cst_val.clone();
-                x_security_token = token_val.clone();
-                headers.push(("CST", cst.as_str()));
-                headers.push(("X-SECURITY-TOKEN", x_security_token.as_str()));
-            }
+        } else if let (Some(cst_val), Some(token_val)) = (&session.cst, &session.x_security_token) {
+            cst = cst_val.clone();
+            x_security_token = token_val.clone();
+            headers.push(("CST", cst.as_str()));
+            headers.push(("X-SECURITY-TOKEN", x_security_token.as_str()));
         }
 
         make_http_request(
@@ -189,7 +195,7 @@ impl HttpClient {
             body,
             RetryConfig::infinite(),
         )
-            .await
+        .await
     }
 
     /// Parses response
@@ -203,7 +209,9 @@ impl HttpClient {
         account_id: &str,
         default_account: Option<bool>,
     ) -> Result<(), AppError> {
-        self.auth.switch_account(account_id, default_account).await?;
+        self.auth
+            .switch_account(account_id, default_account)
+            .await?;
         Ok(())
     }
 

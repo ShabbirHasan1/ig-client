@@ -199,6 +199,16 @@ pub fn parse_instrument_name(instrument_name: &str) -> ParsedOptionInfo {
     }
 }
 
+/// Helper function to deserialize null values as empty vectors
+pub fn deserialize_null_as_empty_vec<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    let opt = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

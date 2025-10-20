@@ -1,25 +1,20 @@
-
 use crate::error::AppError;
-use async_trait::async_trait;
 use crate::model::requests::RecentPricesRequest;
-use crate::model::responses::{DBEntryResponse, MultipleMarketDetailsResponse};
-use crate::presentation::market::{HistoricalPricesResponse, MarketData, MarketDetails, MarketNavigationResponse, MarketSearchResult};
-
+use crate::model::responses::{
+    DBEntryResponse, HistoricalPricesResponse, MarketNavigationResponse, MarketSearchResponse,
+    MultipleMarketDetailsResponse,
+};
+use crate::presentation::market::{MarketData, MarketDetails};
+use async_trait::async_trait;
 
 /// Interface for the market service
 #[async_trait]
 pub trait MarketService: Send + Sync {
     /// Searches markets by search term
-    async fn search_markets(
-        &self,
-        search_term: &str,
-    ) -> Result<MarketSearchResult, AppError>;
+    async fn search_markets(&self, search_term: &str) -> Result<MarketSearchResponse, AppError>;
 
     /// Gets details of a specific market by its EPIC
-    async fn get_market_details(
-        &self,
-        epic: &str,
-    ) -> Result<MarketDetails, AppError>;
+    async fn get_market_details(&self, epic: &str) -> Result<MarketDetails, AppError>;
 
     /// Gets details of multiple markets by their EPICs in a single request
     ///
@@ -61,7 +56,6 @@ pub trait MarketService: Send + Sync {
         end_date: &str,
     ) -> Result<HistoricalPricesResponse, AppError>;
 
-
     async fn get_recent_prices(
         &self,
         params: &RecentPricesRequest<'_>,
@@ -75,7 +69,7 @@ pub trait MarketService: Send + Sync {
     /// * `num_points` - Number of data points required
     async fn get_historical_prices_by_count_v1(
         &self,
-        
+
         epic: &str,
         resolution: &str,
         num_points: i32,
@@ -98,9 +92,7 @@ pub trait MarketService: Send + Sync {
     ///
     /// This method returns the root nodes of the market hierarchy, which can be used
     /// to navigate through the available markets.
-    async fn get_market_navigation(
-        &self,
-    ) -> Result<MarketNavigationResponse, AppError>;
+    async fn get_market_navigation(&self) -> Result<MarketNavigationResponse, AppError>;
 
     /// Gets the market navigation node with the specified ID
     ///
@@ -125,10 +117,7 @@ pub trait MarketService: Send + Sync {
     ///
     /// # Returns
     /// * `Result<Vec<MarketData>, AppError>` - Vector containing all found market instruments
-    async fn get_all_markets(
-        &self,
-        
-    ) -> Result<Vec<MarketData>, AppError>;
+    async fn get_all_markets(&self) -> Result<Vec<MarketData>, AppError>;
 
     /// Gets all markets converted to database entries format
     ///
