@@ -1,10 +1,10 @@
-use tracing::info;
 use ig_client::prelude::*;
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    
+
     // Initialize simple logging
     info!("Testing database types compatibility...");
 

@@ -9,20 +9,21 @@ use crate::application::interfaces::order::OrderService;
 use crate::error::AppError;
 use crate::model::http::HttpClient;
 use crate::model::requests::RecentPricesRequest;
+use crate::model::requests::{
+    ClosePositionRequest, CreateOrderRequest, CreateWorkingOrderRequest, UpdatePositionRequest,
+};
+use crate::model::responses::{
+    ClosePositionResponse, CreateOrderResponse, CreateWorkingOrderResponse, UpdatePositionResponse,
+};
 use crate::model::responses::{
     DBEntryResponse, HistoricalPricesResponse, MarketNavigationResponse, MarketSearchResponse,
     MultipleMarketDetailsResponse,
 };
 use crate::prelude::{
-    AccountActivityResponse, AccountsResponse, PositionsResponse, TransactionHistoryResponse,
-    WorkingOrdersResponse,
+    AccountActivityResponse, AccountsResponse, OrderConfirmationResponse, PositionsResponse,
+    TransactionHistoryResponse, WorkingOrdersResponse,
 };
 use crate::presentation::market::{MarketData, MarketDetails};
-use crate::presentation::order::{
-    ClosePositionRequest, ClosePositionResponse, CreateOrderRequest, CreateOrderResponse,
-    OrderConfirmation, UpdatePositionRequest, UpdatePositionResponse,
-};
-use crate::presentation::working_order::{CreateWorkingOrderRequest, CreateWorkingOrderResponse};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
@@ -525,10 +526,10 @@ impl OrderService for Client {
     async fn get_order_confirmation(
         &self,
         deal_reference: &str,
-    ) -> Result<OrderConfirmation, AppError> {
+    ) -> Result<OrderConfirmationResponse, AppError> {
         let path = format!("confirms/{}", deal_reference);
         info!("Getting confirmation for order: {}", deal_reference);
-        let result: OrderConfirmation = self.http_client.get(&path, Some(1)).await?;
+        let result: OrderConfirmationResponse = self.http_client.get(&path, Some(1)).await?;
         debug!("Confirmation obtained for order: {}", deal_reference);
         Ok(result)
     }
@@ -562,13 +563,6 @@ impl OrderService for Client {
             .await?;
 
         debug!("Position closed with reference: {}", result.deal_reference);
-        Ok(result)
-    }
-
-    async fn get_working_orders(&self) -> Result<WorkingOrdersResponse, AppError> {
-        info!("Getting all working orders");
-        let result: WorkingOrdersResponse = self.http_client.get("workingorders", Some(2)).await?;
-        debug!("Retrieved {} working orders", result.working_orders.len());
         Ok(result)
     }
 

@@ -1,5 +1,6 @@
+use crate::presentation::order::Status;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt;
 use tracing::warn;
 
@@ -207,6 +208,16 @@ where
 {
     let opt = Option::deserialize(deserializer)?;
     Ok(opt.unwrap_or_default())
+}
+
+/// Helper function to deserialize a nullable status field
+/// When the status is null in the JSON, we default to Rejected status
+pub fn deserialize_nullable_status<'de, D>(deserializer: D) -> Result<Status, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or(Status::Rejected))
 }
 
 #[cfg(test)]

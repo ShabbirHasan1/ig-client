@@ -16,5 +16,3 @@ pub mod serialization;
 pub mod trade;
 /// Transaction history models
 pub mod transaction;
-/// Working order models
-pub mod working_order;

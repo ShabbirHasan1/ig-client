@@ -11,7 +11,8 @@ use crate::presentation::instrument::InstrumentType;
 use crate::presentation::market::{
     HistoricalPrice, MarketData, MarketNavigationNode, MarketNode, PriceAllowance,
 };
-use crate::utils::parsing::deserialize_null_as_empty_vec;
+use crate::presentation::order::{Direction, Status};
+use crate::utils::parsing::{deserialize_null_as_empty_vec, deserialize_nullable_status};
 use chrono::{DateTime, Utc};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
@@ -621,4 +622,88 @@ pub struct TransactionHistoryResponse {
     pub transactions: Vec<AccountTransaction>,
     /// Metadata about the transaction list
     pub metadata: TransactionMetadata,
+}
+
+/// Response to order creation
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
+pub struct CreateOrderResponse {
+    /// Client-generated reference for the deal
+    #[serde(rename = "dealReference")]
+    pub deal_reference: String,
+}
+
+/// Response to closing a position
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
+pub struct ClosePositionResponse {
+    /// Client-generated reference for the closing deal
+    #[serde(rename = "dealReference")]
+    pub deal_reference: String,
+}
+
+/// Response to updating a position
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
+pub struct UpdatePositionResponse {
+    /// Client-generated reference for the update deal
+    #[serde(rename = "dealReference")]
+    pub deal_reference: String,
+}
+
+/// Response to working order creation
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
+pub struct CreateWorkingOrderResponse {
+    /// Client-generated reference for the deal
+    #[serde(rename = "dealReference")]
+    pub deal_reference: String,
+}
+
+/// Details of a confirmed order
+#[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
+pub struct OrderConfirmationResponse {
+    /// Date and time of the confirmation
+    pub date: String,
+    /// Status of the order (accepted, rejected, etc.)
+    /// This can be null in some responses (e.g., when market is closed)
+    #[serde(deserialize_with = "deserialize_nullable_status")]
+    pub status: Status,
+    /// Reason for rejection if applicable
+    pub reason: Option<String>,
+    /// Unique identifier for the deal
+    #[serde(rename = "dealId")]
+    pub deal_id: Option<String>,
+    /// Client-generated reference for the deal
+    #[serde(rename = "dealReference")]
+    pub deal_reference: String,
+    /// Status of the deal
+    #[serde(rename = "dealStatus")]
+    pub deal_status: Option<String>,
+    /// Instrument EPIC identifier
+    pub epic: Option<String>,
+    /// Expiry date for the order
+    #[serde(rename = "expiry")]
+    pub expiry: Option<String>,
+    /// Whether a guaranteed stop was used
+    #[serde(rename = "guaranteedStop")]
+    pub guaranteed_stop: Option<bool>,
+    /// Price level of the order
+    #[serde(rename = "level")]
+    pub level: Option<f64>,
+    /// Distance for take profit
+    #[serde(rename = "limitDistance")]
+    pub limit_distance: Option<f64>,
+    /// Price level for take profit
+    #[serde(rename = "limitLevel")]
+    pub limit_level: Option<f64>,
+    /// Size/quantity of the order
+    pub size: Option<f64>,
+    /// Distance for stop loss
+    #[serde(rename = "stopDistance")]
+    pub stop_distance: Option<f64>,
+    /// Price level for stop loss
+    #[serde(rename = "stopLevel")]
+    pub stop_level: Option<f64>,
+    /// Whether a trailing stop was used
+    #[serde(rename = "trailingStop")]
+    pub trailing_stop: Option<bool>,
+    /// Direction of the order (buy or sell)
+    pub direction: Option<Direction>,
 }

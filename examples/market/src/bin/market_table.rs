@@ -1,8 +1,6 @@
-
 use ig_client::prelude::*;
 use std::error::Error;
 use tracing::{error, info};
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -10,7 +8,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     info!("=== IG Market Table Example ===");
-    
+
     // Create client
     let client = Client::default();
 

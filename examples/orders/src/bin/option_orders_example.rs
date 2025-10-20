@@ -1,54 +1,15 @@
-// use ig_client::application::models::order::{
-//     ClosePositionRequest, CreateOrderRequest, Direction, Status,
-// };
-//
-// use ig_client::application::services::order_service::OrderServiceImpl;
-// use ig_client::utils::rate_limiter::RateLimitType;
-// use ig_client::{
-//     config::Config, session::auth::IgAuth, session::interface::IgAuthenticator,
-//     transport::http_client::IgHttpClientImpl, utils::logger::setup_logger,
-// };
 use ig_client::prelude::*;
-use std::sync::Arc;
+
 use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::TradingAccount,
-        0.01,
-    ));
+    info!("=== IG Option Orders Example ===");
 
-    info!("Configuration loaded");
-
-    // Create HTTP client
-    let client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
-    info!("HTTP client created");
-
-    // Create authenticator
-    let authenticator = IgAuth::new(&config);
-    info!("Authenticator created");
-
-    // Login to IG and switch to the configured account if needed
-    info!("Logging in to IG...");
-    let session = if !config.credentials.account_id.trim().is_empty() {
-        info!(
-            "Using login_and_switch_account for account: {}",
-            config.credentials.account_id
-        );
-        authenticator
-            .login_and_switch_account(&config.credentials.account_id, Some(false))
-            .await?
-    } else {
-        info!("Using standard login");
-        authenticator.login().await?
-    };
-    info!(
-        "Session started successfully for account: {}",
-        session.account_id
-    );
+    // Create client
+    let client = Client::default();
 
     let epic = "DO.D.OTCDDAX.68.IP"; // Example epic for testing
     let expiry = Some(
@@ -69,12 +30,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         currency_code.clone(),
     );
 
-    // Create a market service
-    // let market_service = MarketServiceImpl::new(config_no_trade, client.clone());
-    // Create order service
-    let order_service = OrderServiceImpl::new(config, client);
     // Create the position
-    let create_result = order_service.create_order(&session, &create_order).await;
+    let create_result = client.create_order(&create_order).await;
     let deal_id: Option<String> = match create_result {
         Ok(response) => {
             info!(
@@ -83,8 +40,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             // Get the order confirmation to obtain the deal ID
-            let confirmation = order_service
-                .get_order_confirmation(&session, &response.deal_reference)
+            let confirmation = client
+                .get_order_confirmation(&response.deal_reference)
                 .await
                 .expect("Failed to get order confirmation");
 
@@ -137,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     Direction::Sell, // Assuming we are closing a buy position
     //     size,
     // );
-    let close_result = order_service.close_position(&session, &close_request).await;
+    let close_result = client.close_position(&close_request).await;
 
     match close_result {
         Ok(close_response) => {
@@ -147,8 +104,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             // Get the close confirmation
-            let close_confirmation = order_service
-                .get_order_confirmation(&session, &close_response.deal_reference)
+            let close_confirmation = client
+                .get_order_confirmation(&close_response.deal_reference)
                 .await
                 .expect("Failed to get close confirmation");
 

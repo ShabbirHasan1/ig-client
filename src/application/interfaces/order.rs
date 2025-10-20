@@ -1,10 +1,12 @@
 use crate::error::AppError;
-use crate::prelude::WorkingOrdersResponse;
-use crate::presentation::order::{
-    ClosePositionRequest, ClosePositionResponse, CreateOrderRequest, CreateOrderResponse,
-    OrderConfirmation, UpdatePositionRequest, UpdatePositionResponse,
+use crate::model::requests::{
+    ClosePositionRequest, CreateOrderRequest, CreateWorkingOrderRequest, UpdatePositionRequest,
 };
-use crate::presentation::working_order::{CreateWorkingOrderRequest, CreateWorkingOrderResponse};
+use crate::model::responses::{
+    ClosePositionResponse, CreateOrderResponse, CreateWorkingOrderResponse,
+    OrderConfirmationResponse, UpdatePositionResponse,
+};
+
 use async_trait::async_trait;
 
 #[async_trait]
@@ -26,7 +28,7 @@ pub trait OrderService: Send + Sync {
         &self,
 
         deal_reference: &str,
-    ) -> Result<OrderConfirmation, AppError>;
+    ) -> Result<OrderConfirmationResponse, AppError>;
 
     /// Updates an existing position
     async fn update_position(
@@ -42,9 +44,6 @@ pub trait OrderService: Send + Sync {
 
         close_request: &ClosePositionRequest,
     ) -> Result<ClosePositionResponse, AppError>;
-
-    /// Gets all working orders
-    async fn get_working_orders(&self) -> Result<WorkingOrdersResponse, AppError>;
 
     /// Creates a new working order
     async fn create_working_order(

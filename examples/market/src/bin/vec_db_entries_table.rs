@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     info!("=== IG Vec DB Entries Table Example ===");
-    
+
     // Create client
     let client = Client::default();
 
