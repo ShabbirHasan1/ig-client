@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 19/10/25
 ******************************************************************************/
+use crate::application::interfaces::account::AccountService;
 use crate::application::interfaces::market::MarketService;
 use crate::error::AppError;
 use crate::model::http::HttpClient;
@@ -11,15 +12,18 @@ use crate::model::responses::{
     DBEntryResponse, HistoricalPricesResponse, MarketNavigationResponse, MarketSearchResponse,
     MultipleMarketDetailsResponse,
 };
+use crate::prelude::{
+    AccountActivityResponse, AccountsResponse, PositionsResponse, TransactionHistoryResponse,
+    WorkingOrdersResponse,
+};
 use crate::presentation::market::{MarketData, MarketDetails};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
 use tracing::{debug, info};
-use crate::application::interfaces::account::AccountService;
-use crate::model::auth::AccountInfo;
-use crate::prelude::{AccountActivity, AccountsResponse};
-use crate::presentation::account::{Positions, TransactionHistory, WorkingOrders};
+use crate::application::interfaces::order::OrderService;
+use crate::presentation::order::{ClosePositionRequest, ClosePositionResponse, CreateOrderRequest, CreateOrderResponse, OrderConfirmation, UpdatePositionRequest, UpdatePositionResponse};
+use crate::presentation::working_order::{CreateWorkingOrderRequest, CreateWorkingOrderResponse};
 
 pub struct Client {
     http_client: Arc<HttpClient>,
@@ -385,27 +389,140 @@ impl AccountService for Client {
         Ok(result)
     }
 
-    async fn get_positions(&self) -> Result<Positions, AppError> {
+    async fn get_positions(&self) -> Result<PositionsResponse, AppError> {
+        debug!("Getting open positions");
+        let result: PositionsResponse = self.http_client.get("positions", Some(2)).await?;
+        debug!("Positions obtained: {} positions", result.positions.len());
+        Ok(result)
+    }
+
+    async fn get_positions_w_filter(&self, filter: &str) -> Result<PositionsResponse, AppError> {
+        debug!("Getting open positions with filter: {}", filter);
+        let mut positions = self.get_positions().await?;
+
+        positions
+            .positions
+            .retain(|position| position.market.epic.contains(filter));
+
+        debug!(
+            "Positions obtained after filtering: {} positions",
+            positions.positions.len()
+        );
+        Ok(positions)
+    }
+
+    async fn get_working_orders(&self) -> Result<WorkingOrdersResponse, AppError> {
+        info!("Getting working orders");
+        let result: WorkingOrdersResponse = self.http_client.get("workingorders", Some(2)).await?;
+        debug!(
+            "Working orders obtained: {} orders",
+            result.working_orders.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_activity(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<AccountActivityResponse, AppError> {
+        let path = format!("history/activity?from={}&to={}&pageSize=500", from, to);
+        info!("Getting account activity");
+        let result: AccountActivityResponse = self.http_client.get(&path, Some(3)).await?;
+        debug!(
+            "Account activity obtained: {} activities",
+            result.activities.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_activity_with_details(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<AccountActivityResponse, AppError> {
+        let path = format!(
+            "history/activity?from={}&to={}&detailed=true&pageSize=500",
+            from, to
+        );
+        info!("Getting detailed account activity");
+        let result: AccountActivityResponse = self.http_client.get(&path, Some(3)).await?;
+        debug!(
+            "Detailed account activity obtained: {} activities",
+            result.activities.len()
+        );
+        Ok(result)
+    }
+
+    async fn get_transactions(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<TransactionHistoryResponse, AppError> {
+        const PAGE_SIZE: u32 = 200;
+        let mut all_transactions = Vec::new();
+        let mut current_page = 1;
+        #[allow(unused_assignments)]
+        let mut last_metadata = None;
+
+        loop {
+            let path = format!(
+                "history/transactions?from={}&to={}&pageSize={}&pageNumber={}",
+                from, to, PAGE_SIZE, current_page
+            );
+            info!("Getting transaction history page {}", current_page);
+
+            let result: TransactionHistoryResponse = self.http_client.get(&path, Some(2)).await?;
+
+            let total_pages = result.metadata.page_data.total_pages as u32;
+            last_metadata = Some(result.metadata);
+            all_transactions.extend(result.transactions);
+
+            if current_page >= total_pages {
+                break;
+            }
+            current_page += 1;
+        }
+
+        debug!(
+            "Total transaction history obtained: {} transactions",
+            all_transactions.len()
+        );
+
+        Ok(TransactionHistoryResponse {
+            transactions: all_transactions,
+            metadata: last_metadata
+                .ok_or_else(|| AppError::InvalidInput("Could not retrieve metadata".to_string()))?,
+        })
+    }
+}
+
+#[async_trait]
+impl OrderService for Client {
+    async fn create_order(&self, order: &CreateOrderRequest) -> Result<CreateOrderResponse, AppError> {
+        info!("Creating order for: {}", order.epic);
+        let result: CreateOrderResponse = self.http_client.post("positions/otc", order, Some(2)).await?;
+        debug!("Order created with reference: {}", result.deal_reference);
+        Ok(result)
+    }
+
+    async fn get_order_confirmation(&self, deal_reference: &str) -> Result<OrderConfirmation, AppError> {
         todo!()
     }
 
-    async fn get_positions_w_filter(&self, filter: &str) -> Result<Positions, AppError> {
+    async fn update_position(&self, deal_id: &str, update: &UpdatePositionRequest) -> Result<UpdatePositionResponse, AppError> {
         todo!()
     }
 
-    async fn get_working_orders(&self) -> Result<WorkingOrders, AppError> {
+    async fn close_position(&self, close_request: &ClosePositionRequest) -> Result<ClosePositionResponse, AppError> {
         todo!()
     }
 
-    async fn get_activity(&self, from: &str, to: &str) -> Result<AccountActivity, AppError> {
+    async fn get_working_orders(&self) -> Result<WorkingOrdersResponse, AppError> {
         todo!()
     }
 
-    async fn get_activity_with_details(&self, from: &str, to: &str) -> Result<AccountActivity, AppError> {
-        todo!()
-    }
-
-    async fn get_transactions(&self, from: &str, to: &str) -> Result<TransactionHistory, AppError> {
+    async fn create_working_order(&self, order: &CreateWorkingOrderRequest) -> Result<CreateWorkingOrderResponse, AppError> {
         todo!()
     }
 }

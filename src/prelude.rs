@@ -44,7 +44,7 @@ pub use crate::error::AppError;
 pub use crate::presentation::market::{MarketData, MarketDetails, MarketNode};
 
 pub use crate::presentation::account::{
-    Account, AccountActivity, AccountBalance, AccountInfo, Activity,
+    Account, AccountActivityResponse, AccountBalance, AccountInfo, Activity,
 };
 
 pub use crate::presentation::trade::{

@@ -1,9 +1,9 @@
-
 use crate::error::AppError;
+use crate::prelude::{
+    AccountActivityResponse, AccountsResponse, PositionsResponse, TransactionHistoryResponse,
+    WorkingOrdersResponse,
+};
 use async_trait::async_trait;
-use crate::model::auth::AccountInfo;
-use crate::prelude::{AccountActivity, AccountsResponse};
-use crate::presentation::account::{Positions, TransactionHistory, WorkingOrders};
 
 /// Interface for the account service
 #[async_trait]
@@ -12,16 +12,13 @@ pub trait AccountService: Send + Sync {
     async fn get_accounts(&self) -> Result<AccountsResponse, AppError>;
 
     /// Gets open positions
-    async fn get_positions(&self) -> Result<Positions, AppError>;
+    async fn get_positions(&self) -> Result<PositionsResponse, AppError>;
 
     /// Gets open positions base in filter
-    async fn get_positions_w_filter(
-        &self,
-        filter: &str,
-    ) -> Result<Positions, AppError>;
+    async fn get_positions_w_filter(&self, filter: &str) -> Result<PositionsResponse, AppError>;
 
     /// Gets working orders
-    async fn get_working_orders(&self) -> Result<WorkingOrders, AppError>;
+    async fn get_working_orders(&self) -> Result<WorkingOrdersResponse, AppError>;
 
     /// Gets account activity
     ///
@@ -32,12 +29,8 @@ pub trait AccountService: Send + Sync {
     ///
     /// # Returns
     /// * Account activity for the specified period
-    async fn get_activity(
-        &self,
-        
-        from: &str,
-        to: &str,
-    ) -> Result<AccountActivity, AppError>;
+    async fn get_activity(&self, from: &str, to: &str)
+    -> Result<AccountActivityResponse, AppError>;
 
     /// Gets detailed account activity
     ///
@@ -53,16 +46,15 @@ pub trait AccountService: Send + Sync {
     /// * Detailed account activity for the specified period
     async fn get_activity_with_details(
         &self,
-        
+
         from: &str,
         to: &str,
-    ) -> Result<AccountActivity, AppError>;
+    ) -> Result<AccountActivityResponse, AppError>;
 
     /// Gets transaction history for a given period, handling pagination automatically.
     async fn get_transactions(
         &self,
-        
         from: &str,
         to: &str,
-    ) -> Result<TransactionHistory, AppError>;
+    ) -> Result<TransactionHistoryResponse, AppError>;
 }

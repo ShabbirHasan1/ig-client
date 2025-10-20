@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 19/10/25
 ******************************************************************************/
-use crate::prelude::{Account, MarketDetails};
+use std::collections::HashMap;
+use crate::prelude::{Account, Activity, MarketDetails};
 use crate::presentation::instrument::InstrumentType;
 use crate::presentation::market::{
     HistoricalPrice, MarketData, MarketNavigationNode, MarketNode, PriceAllowance,
@@ -12,6 +13,7 @@ use crate::utils::parsing::deserialize_null_as_empty_vec;
 use chrono::{DateTime, Utc};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
+use crate::presentation::account::{AccountTransaction, ActivityMetadata, Position, TransactionMetadata, WorkingOrder};
 
 #[derive(
     DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default,
@@ -552,4 +554,65 @@ pub struct MarketNavigationResponse {
 pub struct AccountsResponse {
     /// List of accounts owned by the user
     pub accounts: Vec<Account>,
+}
+
+/// Open positions
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize, Default)]
+pub struct PositionsResponse {
+    /// List of open positions
+    pub positions: Vec<Position>,
+}
+
+impl PositionsResponse {
+    /// Compact positions by epic, combining positions with the same epic
+    ///
+    /// This method takes a vector of positions and returns a new vector where
+    /// positions with the same epic have been combined into a single position.
+    ///
+    /// # Arguments
+    /// * `positions` - A vector of positions to compact
+    ///
+    /// # Returns
+    /// A vector of positions with unique epics
+    pub fn compact_by_epic(positions: Vec<Position>) -> Vec<Position> {
+        let mut epic_map: HashMap<String, Position> = std::collections::HashMap::new();
+
+        for position in positions {
+            let epic = position.market.epic.clone();
+            epic_map
+                .entry(epic)
+                .and_modify(|existing| {
+                    *existing = existing.clone() + position.clone();
+                })
+                .or_insert(position);
+        }
+
+        epic_map.into_values().collect()
+    }
+}
+
+/// Working orders
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
+pub struct WorkingOrdersResponse {
+    /// List of pending working orders
+    #[serde(rename = "workingOrders")]
+    pub working_orders: Vec<WorkingOrder>,
+}
+
+/// Account activity
+#[derive(Debug, Clone, Deserialize)]
+pub struct AccountActivityResponse {
+    /// List of activities on the account
+    pub activities: Vec<Activity>,
+    /// Metadata about pagination
+    pub metadata: Option<ActivityMetadata>,
+}
+
+/// Transaction history
+#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
+pub struct TransactionHistoryResponse {
+    /// List of account transactions
+    pub transactions: Vec<AccountTransaction>,
+    /// Metadata about the transaction list
+    pub metadata: TransactionMetadata,
 }

@@ -52,15 +52,6 @@ pub struct AccountBalance {
     pub available: f64,
 }
 
-/// Account activity
-#[derive(Debug, Clone, Deserialize)]
-pub struct AccountActivity {
-    /// List of activities on the account
-    pub activities: Vec<Activity>,
-    /// Metadata about pagination
-    pub metadata: Option<ActivityMetadata>,
-}
-
 /// Metadata for activity pagination
 #[derive(Debug, Clone, Deserialize)]
 pub struct ActivityMetadata {
@@ -236,40 +227,6 @@ pub struct ActivityAction {
     pub affected_deal_id: Option<String>,
 }
 
-/// Open positions
-#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize, Default)]
-pub struct Positions {
-    /// List of open positions
-    pub positions: Vec<Position>,
-}
-
-impl Positions {
-    /// Compact positions by epic, combining positions with the same epic
-    ///
-    /// This method takes a vector of positions and returns a new vector where
-    /// positions with the same epic have been combined into a single position.
-    ///
-    /// # Arguments
-    /// * `positions` - A vector of positions to compact
-    ///
-    /// # Returns
-    /// A vector of positions with unique epics
-    pub fn compact_by_epic(positions: Vec<Position>) -> Vec<Position> {
-        let mut epic_map: HashMap<String, Position> = std::collections::HashMap::new();
-
-        for position in positions {
-            let epic = position.market.epic.clone();
-            epic_map
-                .entry(epic)
-                .and_modify(|existing| {
-                    *existing = existing.clone() + position.clone();
-                })
-                .or_insert(position);
-        }
-
-        epic_map.into_values().collect()
-    }
-}
 
 /// Individual position
 #[derive(Debug, Clone, DisplaySimple, Serialize, Deserialize)]
@@ -434,14 +391,6 @@ pub struct PositionMarket {
     pub scaling_factor: i64,
 }
 
-/// Working orders
-#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
-pub struct WorkingOrders {
-    /// List of pending working orders
-    #[serde(rename = "workingOrders")]
-    pub working_orders: Vec<WorkingOrder>,
-}
-
 /// Working order
 #[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
 pub struct WorkingOrder {
@@ -566,15 +515,6 @@ pub struct AccountMarketData {
     /// Factor for scaling prices
     #[serde(rename = "scalingFactor")]
     pub scaling_factor: i64,
-}
-
-/// Transaction history
-#[derive(Debug, Clone, DisplaySimple, Deserialize, Serialize)]
-pub struct TransactionHistory {
-    /// List of account transactions
-    pub transactions: Vec<AccountTransaction>,
-    /// Metadata about the transaction list
-    pub metadata: TransactionMetadata,
 }
 
 /// Transaction metadata

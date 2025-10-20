@@ -102,8 +102,9 @@ impl HttpClient {
         &self,
         path: &str,
         body: B,
+        version: Option<u8>,
     ) -> Result<T, AppError> {
-        self.request(Method::POST, path, Some(body), None).await
+        self.request(Method::POST, path, Some(body), version).await
     }
 
     /// Makes a PUT request
@@ -111,8 +112,9 @@ impl HttpClient {
         &self,
         path: &str,
         body: B,
+        version: Option<u8>,
     ) -> Result<T, AppError> {
-        self.request(Method::PUT, path, Some(body), None).await
+        self.request(Method::PUT, path, Some(body), version).await
     }
 
     /// Makes a DELETE request
