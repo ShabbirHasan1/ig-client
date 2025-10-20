@@ -3,6 +3,10 @@ name = "examples_chart"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "chart_lightstreamer"
+path = "src/bin/chart_lightstreamer.rs"
+
 [dependencies]
 ig-client = { workspace = true }
 lightstreamer-rs = { workspace = true }

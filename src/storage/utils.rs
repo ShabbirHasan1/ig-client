@@ -1,5 +1,5 @@
-use crate::application::models::transaction::StoreTransaction;
 use crate::error::AppError;
+use crate::presentation::transaction::StoreTransaction;
 use crate::storage::config::DatabaseConfig;
 use serde::Serialize;
 use serde::de::DeserializeOwned;

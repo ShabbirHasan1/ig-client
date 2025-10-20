@@ -1,3 +1,4 @@
+use crate::presentation::market::HistoricalPrice;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use tracing::{info, warn};
@@ -101,7 +102,7 @@ pub struct StorageStats {
 pub async fn store_historical_prices(
     pool: &PgPool,
     epic: &str,
-    prices: &[crate::application::models::market::HistoricalPrice],
+    prices: &[HistoricalPrice],
 ) -> Result<StorageStats, sqlx::Error> {
     let mut stats = StorageStats::default();
     let mut tx = pool.begin().await?;
@@ -210,7 +211,9 @@ pub async fn store_historical_prices(
 }
 
 /// Parse snapshot time from IG format to `DateTime<Utc>`
-fn parse_snapshot_time(snapshot_time: &str) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
+pub fn parse_snapshot_time(
+    snapshot_time: &str,
+) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
     // IG format: "yyyy/MM/dd hh:mm:ss" or "yyyy-MM-dd hh:mm:ss"
     let formats = [
         "%Y/%m/%d %H:%M:%S",

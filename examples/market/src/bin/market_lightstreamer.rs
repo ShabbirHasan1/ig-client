@@ -1,9 +1,7 @@
-use ig_client::application::services::Listener;
-use ig_client::config::Config;
+use ig_client::application::interfaces::listener::Listener;
 use ig_client::error::AppError;
-use ig_client::presentation::PresentationMarketData;
-use ig_client::session::auth::IgAuth;
-use ig_client::session::interface::IgAuthenticator;
+use ig_client::prelude::Client;
+use ig_client::presentation::price::PriceData;
 use ig_client::utils::logger::setup_logger;
 use lightstreamer_rs::client::{LightstreamerClient, Transport};
 use lightstreamer_rs::subscription::{Snapshot, Subscription, SubscriptionMode};
@@ -14,80 +12,30 @@ use tracing::{error, info, warn};
 
 const MAX_CONNECTION_ATTEMPTS: u64 = 3;
 
-fn callback(update: &PresentationMarketData) -> Result<(), AppError> {
+fn callback(update: &PriceData) -> Result<(), AppError> {
     let item = serde_json::to_string_pretty(&update)?;
-    info!("MarketData: {}", item);
+    info!("PriceData: {}", item);
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let config = Arc::new(Config::new());
-    let authenticator = IgAuth::new(&config);
-    info!("Authenticator created");
-
-    info!("Logging in to IG...");
-    let session = match authenticator.login().await {
-        Ok(session) => {
-            info!("Session started successfully");
-            info!("Account ID: {}", session.account_id);
-            info!("CST Token length: {}", session.cst.len());
-            info!("Security Token length: {}", session.token.len());
-            session
-        }
-        Err(e) => {
-            error!("Failed to log in: {}", e);
-            error!("Please check your credentials in the .env file");
-            error!("Make sure your IG_USERNAME, IG_PASSWORD, and IG_API_KEY are correct");
-            return Err(Box::new(e) as Box<dyn std::error::Error>);
-        }
-    };
-    info!("Login successful");
-
-    // Determine if we're in demo environment based on the WebSocket URL in config
-    let ws_url = &config.websocket.url;
-    let is_demo = ws_url.contains("demo");
-
-    // Determine the server address based on environment
-    let server_address = if is_demo {
-        "https://demo-apd.marketdatasystems.com/lightstreamer"
-    } else {
-        "https://apd.marketdatasystems.com/lightstreamer"
-    };
-
-    // Determine the adapter set based on environment
-    let adapter_set = if is_demo { "DEMO" } else { "PROD" };
-
-    info!("Using Lightstreamer server: {}", server_address);
-    info!("Using adapter set: {}", adapter_set);
-    info!("Using account ID: {}", session.account_id.trim());
-
-    // Format the password as required by IG's Lightstreamer authentication
-    let cst = session.cst.trim();
-    let token = session.token.trim();
-    let password = format!("CST-{}|XST-{}", cst, token);
-
-    info!("Using CST token of length: {}", cst.len());
-    info!("Using XST token of length: {}", token.len());
+    let http_client = Client::default();
+    let ws_info = http_client.get_ws_info().await;
+    let password = ws_info.get_ws_password();
 
     // Create a subscription for a market
-    let epic = "MARKET:DO.D.OTCDDAX.95.IP"; // DAX 100
+    let epic = "MARKET:DO.D.OTCDDAX.95.IP".to_string();
 
     let mut subscription = Subscription::new(
         SubscriptionMode::Merge,
-        Some(vec![epic.to_string()]),
+        Some(vec![epic]),
         Some(vec![
-            "BID".to_string(),
-            "OFFER".to_string(),
             "HIGH".to_string(),
             "LOW".to_string(),
-            "MID_OPEN".to_string(),
-            "CHANGE".to_string(),
-            "CHANGE_PCT".to_string(),
-            "MARKET_DELAY".to_string(),
-            "MARKET_STATE".to_string(),
-            "UPDATE_TIME".to_string(),
+            "BID".to_string(),
+            "OFFER".to_string(),
         ]),
     )?;
 
@@ -98,9 +46,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a new Lightstreamer client instance and wrap it in an Arc<Mutex<>> so it can be shared across threads.
     let client = Arc::new(Mutex::new(LightstreamerClient::new(
-        Some(server_address),
+        Some(ws_info.server.as_str()),
         None,
-        Some(session.account_id.trim()),
+        Some(&ws_info.account_id),
         Some(&password),
     )?));
 
@@ -113,6 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         client
             .connection_options
             .set_forced_transport(Some(Transport::WsStreaming));
+        info!("Subscription added ");
     }
 
     // Create a new Notify instance to send a shutdown signal to the signal handler thread.

@@ -1,10 +1,10 @@
 /// Module containing database configuration structures
 pub mod config;
-/// Module containing database service for historical prices persistence
+/// Historical prices storage and retrieval
 pub mod historical_prices;
-/// Module containing database service for market data persistence
+/// Market data database operations
 pub mod market_database;
-/// Module containing data structures optimized for PostgreSQL storage
+/// Market hierarchy persistence models
 pub mod market_persistence;
-/// Module containing utility functions for database operations
+/// Storage utility functions
 pub mod utils;

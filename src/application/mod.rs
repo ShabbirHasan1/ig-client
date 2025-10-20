@@ -1,9 +1,10 @@
-/// Data models and structures
-pub mod models;
-
-/// Service implementations for business logic
-pub mod services;
-
-pub use market_service::*;
-pub use models::*;
-pub use services::*;
+/// Authentication and session management
+pub mod auth;
+/// Main client implementation
+pub mod client;
+/// Application configuration module
+pub mod config;
+/// Service interfaces and traits
+pub mod interfaces;
+/// Rate limiter module for API request throttling
+pub mod rate_limiter;

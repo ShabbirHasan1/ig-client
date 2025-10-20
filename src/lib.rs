@@ -500,20 +500,11 @@
 //!
 //! Please make sure your code passes all tests and linting checks before submitting a pull request.
 
-/// Configuration for the IG Markets API client
-pub mod config;
-
 /// Core application logic and services
 pub mod application;
 
 /// User interface and presentation layer
 pub mod presentation;
-
-/// Authentication and session management
-pub mod session;
-
-/// Network transport and API communication
-pub mod transport;
 
 /// Module containing global constants used throughout the library
 pub mod constants;
@@ -524,6 +515,9 @@ pub mod error;
 /// Data persistence and storage
 pub mod storage;
 
+/// Data models for IG Markets API entities
+pub mod model;
+/// Prelude module for convenient imports
 pub mod prelude;
 /// Utility functions and helpers
 pub mod utils;

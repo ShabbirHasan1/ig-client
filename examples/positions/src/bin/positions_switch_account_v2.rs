@@ -1,12 +1,5 @@
-use ig_client::application::services::AccountService;
 /// Test account switching with API v2 (CST authentication)
-use ig_client::application::services::account_service::AccountServiceImpl;
-use ig_client::config::Config;
-use ig_client::session::auth::IgAuth;
-use ig_client::session::interface::IgAuthenticator;
-use ig_client::transport::http_client::IgHttpClientImpl;
-use ig_client::utils::logger::setup_logger;
-use ig_client::utils::rate_limiter::RateLimitType;
+use ig_client::prelude::*;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -17,23 +10,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     info!("=== Positions Switch Account Example (API v2) ===\n");
 
-    // Create configuration with API v2
-    let mut config = Config::with_rate_limit_type(RateLimitType::NonTradingAccount, 0.7);
-    config.api_version = Some(2); // Use CST authentication
-    let config = Arc::new(config);
+    // Create configuration with API v2 (CST authentication)
+    let config = Config {
+        api_version: Some(2),
+        ..Config::default()
+    };
 
     info!("Configuration loaded:");
     info!("  Base URL: {}", config.rest_api.base_url);
     info!("  API Version: {:?}", config.api_version);
 
-    // Create HTTP client and services
-    let client = Arc::new(IgHttpClientImpl::new(config.clone()));
-    let account_service = AccountServiceImpl::new(config.clone(), client);
-    let auth = IgAuth::new(&config);
+    // Create HTTP client and main client
+    let http_client = Arc::new(HttpClient::new(config).await?);
+    let client = Client::default();
 
     // Step 1: Login
     info!("\n1. Logging in with API v2...");
-    let session = match auth.login().await {
+    let session = match http_client.get_session().await {
         Ok(s) => s,
         Err(e) => {
             error!("✗ Login failed: {:?}", e);
@@ -44,14 +37,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("✓ Login successful");
     info!("  Account ID: {}", session.account_id);
     info!("  Uses OAuth: {}", session.is_oauth());
-    info!("  Uses CST: {}", session.is_cst_auth());
 
     // Step 2: Get positions from current account
     info!(
         "\n2. Getting positions from account: {}",
         session.account_id
     );
-    match account_service.get_positions(&session).await {
+    match client.get_positions().await {
         Ok(positions) => {
             info!("✓ Successfully retrieved positions");
             info!("  Total positions: {}", positions.positions.len());
@@ -83,26 +75,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     info!("\n3. Switching to account: {}", target_account);
 
-    let new_session = match auth
-        .switch_account(&session, &target_account, Some(false))
+    match http_client
+        .switch_account(&target_account, Some(false))
         .await
     {
-        Ok(s) => {
-            info!("✓ Successfully switched to account: {}", s.account_id);
-            s
+        Ok(()) => {
+            info!("✓ Successfully switched to account: {}", target_account);
         }
         Err(e) => {
             error!("✗ Failed to switch account: {:?}", e);
             return Err(format!("Account switch error: {:?}", e).into());
         }
-    };
+    }
+
+    let new_session = http_client.get_session().await?;
 
     // Step 4: Get positions from new account
     info!(
         "\n4. Getting positions from account: {}",
         new_session.account_id
     );
-    match account_service.get_positions(&new_session).await {
+    match client.get_positions().await {
         Ok(positions) => {
             info!("✓ Successfully retrieved positions");
             info!("  Total positions: {}", positions.positions.len());

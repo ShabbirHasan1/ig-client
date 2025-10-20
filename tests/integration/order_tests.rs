@@ -1,42 +1,23 @@
 // Integration tests for order service endpoints
 
 use crate::common;
-use ig_client::application::models::order::TimeInForce;
-use ig_client::utils::logger::setup_logger;
-use ig_client::{
-    application::models::order::{
-        ClosePositionRequest, CreateOrderRequest, Direction, UpdatePositionRequest,
-    },
-    application::services::OrderService,
-    application::services::order_service::OrderServiceImpl,
-};
+use ig_client::prelude::*;
+use ig_client::presentation::order::{ClosePositionRequest, CreateOrderRequest, Direction, TimeInForce, UpdatePositionRequest};
 use tokio::runtime::Runtime;
-use tracing::info;
-use tracing::warn;
+use tracing::{info, warn};
 
 #[test]
 #[ignore]
 fn test_create_and_close_position() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create order service
-    let order_service = OrderServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test create and close position
     rt.block_on(async {
-        // Wait to respect the rate limit (trading requests per account)
-        ig_client::utils::rate_limiter::account_trading_limiter()
-            .wait()
-            .await;
         info!("Creating a test position");
 
         // Get current market price to set a reasonable limit price

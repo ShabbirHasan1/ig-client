@@ -1,11 +1,7 @@
 // Integration tests for account endpoints
 
 use crate::common;
-use ig_client::utils::logger::setup_logger;
-use ig_client::{
-    application::services::AccountService,
-    application::services::account_service::AccountServiceImpl,
-};
+use ig_client::prelude::*;
 use tokio::runtime::Runtime;
 use tracing::info;
 
@@ -13,31 +9,17 @@ use tracing::info;
 #[ignore]
 fn test_get_accounts() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create account service
-    let account_service = AccountServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get accounts
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per account)
-        ig_client::utils::rate_limiter::account_non_trading_limiter()
-            .wait()
-            .await;
         info!("Getting accounts");
 
-        let result = account_service
-            .get_accounts(&session)
-            .await
-            .expect("Failed to get accounts");
+        let result = client.get_accounts().await.expect("Failed to get accounts");
 
         // Verify the result contains the expected data
         assert!(
@@ -72,25 +54,14 @@ fn test_get_accounts() {
 #[ignore]
 fn test_get_account_activity() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create account service
-    let account_service = AccountServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get account activity
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per account)
-        ig_client::utils::rate_limiter::account_non_trading_limiter()
-            .wait()
-            .await;
         // Use a date range for the last 7 days
         use chrono::{Duration, Utc};
 
@@ -102,8 +73,8 @@ fn test_get_account_activity() {
 
         info!("Getting account activity from {} to {}", from_str, to_str);
 
-        let result = account_service
-            .get_activity(&session, &from_str, &to_str)
+        let result = client
+            .get_activity(&from_str, &to_str)
             .await
             .expect("Failed to get account activity");
 
@@ -132,25 +103,14 @@ fn test_get_account_activity() {
 #[ignore]
 fn test_get_transaction_history() {
     setup_logger();
-    // Create test configuration and client
-    let config = common::create_test_config();
-    let client = common::create_test_client(config.clone());
-
-    // Create account service
-    let account_service = AccountServiceImpl::new(config, client);
-
-    // Get a session
-    let session = common::login_with_account_switch();
+    // Create client
+    let client = common::create_test_client();
 
     // Create a runtime for the async operations
     let rt = Runtime::new().expect("Failed to create runtime");
 
     // Test get transaction history
     rt.block_on(async {
-        // Wait to respect the rate limit (non-trading requests per account)
-        ig_client::utils::rate_limiter::account_non_trading_limiter()
-            .wait()
-            .await;
         // Use a date range for the last 30 days
         use chrono::{Duration, Utc};
 
@@ -165,8 +125,8 @@ fn test_get_transaction_history() {
             from_str, to_str
         );
 
-        let result = account_service
-            .get_transactions(&session, &from_str, &to_str)
+        let result = client
+            .get_transactions(&from_str, &to_str)
             .await
             .expect("Failed to get transaction history");
 

@@ -1,11 +1,4 @@
-use ig_client::application::services::MarketService;
-use ig_client::utils::rate_limiter::RateLimitType;
-use ig_client::{
-    application::services::market_service::MarketServiceImpl, config::Config,
-    session::auth::IgAuth, session::interface::IgAuthenticator,
-    transport::http_client::IgHttpClientImpl, utils::logger::setup_logger,
-};
-use std::sync::Arc;
+use ig_client::prelude::*;
 use tabled::{Table, Tabled};
 use tracing::{error, info};
 
@@ -32,33 +25,14 @@ struct DBEntryDisplay {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
-    // Create configuration using the default Config implementation
-    let config = Arc::new(Config::with_rate_limit_type(
-        RateLimitType::OnePerSecond,
-        0.5,
-    ));
+    info!("=== IG Vec DB Entries Table Example ===");
 
-    // Create HTTP client
-    let http_client = Arc::new(IgHttpClientImpl::new(Arc::clone(&config)));
-    info!("HTTP client created");
-
-    // Create market service
-    let market_service = MarketServiceImpl::new(Arc::clone(&config), Arc::clone(&http_client));
-    info!("Market service created");
-
-    // Create authenticator
-    let authenticator = IgAuth::new(&config);
-    info!("Authenticator created");
-
-    // Login to IG with detailed error handling
-    info!("Attempting to login to IG...");
-    let session = authenticator
-        .login_and_switch_account(&config.credentials.account_id, Some(false))
-        .await?;
+    // Create client
+    let client = Client::default();
 
     // Get vec DB entries
     info!("\n=== Fetching Vec DB Entries ===");
-    match market_service.get_vec_db_entries(&session).await {
+    match client.get_vec_db_entries().await {
         Ok(db_entries) => {
             if db_entries.is_empty() {
                 info!("📊 No DB entries found");
