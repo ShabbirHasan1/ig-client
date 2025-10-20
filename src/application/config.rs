@@ -1,7 +1,7 @@
 use crate::constants::{DAYS_TO_BACK_LOOK, DEFAULT_PAGE_SIZE, DEFAULT_SLEEP_TIME};
 use crate::storage::config::DatabaseConfig;
 use dotenv::dotenv;
-use pretty_simple_display::DisplaySimple;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -9,8 +9,9 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use tracing::error;
 use tracing::log::debug;
+use crate::utils::config::get_env_or_default;
 
-#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
+#[derive(DebugPretty, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Authentication credentials for the IG Markets API
 pub struct Credentials {
     /// Username for the IG Markets account
@@ -27,7 +28,7 @@ pub struct Credentials {
     pub account_token: Option<String>,
 }
 
-#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
+#[derive(DebugPretty, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Main configuration for the IG Markets API client
 pub struct Config {
     /// Authentication credentials
@@ -50,7 +51,7 @@ pub struct Config {
     pub api_version: Option<u8>,
 }
 
-#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
+#[derive(DebugPretty, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Configuration for the REST API
 pub struct RestApiConfig {
     /// Base URL for the IG Markets REST API
@@ -59,7 +60,7 @@ pub struct RestApiConfig {
     pub timeout: u64,
 }
 
-#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
+#[derive(DebugPretty, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Configuration for the WebSocket API
 pub struct WebSocketConfig {
     /// URL for the IG Markets WebSocket API
@@ -68,7 +69,7 @@ pub struct WebSocketConfig {
     pub reconnect_interval: u64,
 }
 
-#[derive(Debug, DisplaySimple, Serialize, Deserialize, Clone)]
+#[derive(DebugPretty, DisplaySimple, Serialize, Deserialize, Clone)]
 /// Configuration for rate limiting API requests
 pub struct RateLimiterConfig {
     /// Maximum number of requests allowed per period
@@ -77,29 +78,6 @@ pub struct RateLimiterConfig {
     pub period_seconds: u64,
     /// Burst size - maximum number of requests that can be made at once
     pub burst_size: u32,
-}
-
-/// Gets an environment variable or returns a default value if not found or cannot be parsed
-///
-/// # Arguments
-///
-/// * `env_var` - The name of the environment variable
-/// * `default` - The default value to use if the environment variable is not found or cannot be parsed
-///
-/// # Returns
-///
-/// The parsed value of the environment variable or the default value
-pub fn get_env_or_default<T: FromStr>(env_var: &str, default: T) -> T
-where
-    <T as FromStr>::Err: Debug,
-{
-    match env::var(env_var) {
-        Ok(val) => val.parse::<T>().unwrap_or_else(|_| {
-            error!("Failed to parse {}: {}, using default", env_var, val);
-            default
-        }),
-        Err(_) => default,
-    }
 }
 
 impl Default for Config {
@@ -130,7 +108,6 @@ impl Config {
         let username = get_env_or_default("IG_USERNAME", String::from("default_username"));
         let password = get_env_or_default("IG_PASSWORD", String::from("default_password"));
         let api_key = get_env_or_default("IG_API_KEY", String::from("default_api_key"));
-
         let sleep_hours = get_env_or_default("TX_LOOP_INTERVAL_HOURS", DEFAULT_SLEEP_TIME);
         let page_size = get_env_or_default("TX_PAGE_SIZE", DEFAULT_PAGE_SIZE);
         let days_to_look_back = get_env_or_default("TX_DAYS_LOOKBACK", DAYS_TO_BACK_LOOK);
@@ -145,34 +122,7 @@ impl Config {
         if api_key == "default_api_key" {
             error!("IG_API_KEY not found in environment variables or .env file");
         }
-
-        // Print information about loaded environment variables
-        debug!("Environment variables loaded:");
-        debug!(
-            "  IG_USERNAME: {}",
-            if username == "default_username" {
-                "Not set"
-            } else {
-                "Set"
-            }
-        );
-        debug!(
-            "  IG_PASSWORD: {}",
-            if password == "default_password" {
-                "Not set"
-            } else {
-                "Set"
-            }
-        );
-        debug!(
-            "  IG_API_KEY: {}",
-            if api_key == "default_api_key" {
-                "Not set"
-            } else {
-                "Set"
-            }
-        );
-
+        
         Config {
             credentials: Credentials {
                 username,
@@ -204,9 +154,9 @@ impl Config {
                 max_connections: get_env_or_default("DATABASE_MAX_CONNECTIONS", 5),
             },
             rate_limiter: RateLimiterConfig {
-                max_requests: get_env_or_default("IG_RATE_LIMIT_MAX_REQUESTS", 3),
-                period_seconds: get_env_or_default("IG_RATE_LIMIT_PERIOD_SECONDS", 10),
-                burst_size: get_env_or_default("IG_RATE_LIMIT_BURST_SIZE", 2),
+                max_requests: get_env_or_default("IG_RATE_LIMIT_MAX_REQUESTS", 29), // 3
+                period_seconds: get_env_or_default("IG_RATE_LIMIT_PERIOD_SECONDS", 60), // 10
+                burst_size: get_env_or_default("IG_RATE_LIMIT_BURST_SIZE", 20),
             },
             sleep_hours,
             page_size,

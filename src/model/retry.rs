@@ -3,9 +3,10 @@
    Email: jb@taunais.com
    Date: 20/10/25
 ******************************************************************************/
+use crate::utils::config::get_env_or_none;
 
 /// Configuration for HTTP request retry behavior
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct RetryConfig {
     /// Maximum number of retries on rate limit (None = infinite retries)
     pub max_retry_count: Option<u32>,
@@ -66,5 +67,17 @@ impl RetryConfig {
     #[must_use]
     pub fn delay_secs(&self) -> u64 {
         self.retry_delay_secs.unwrap_or(10)
+    }
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        let max_retry_count: Option<u32> = get_env_or_none("MAX_RETRY_COUNT");
+        let retry_delay_secs: Option<u64> = get_env_or_none("RETRY_DELAY_SECS");
+        
+        Self {
+            max_retry_count,
+            retry_delay_secs,
+        }
     }
 }
