@@ -5,8 +5,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
-use std::fmt::Debug;
-use std::str::FromStr;
 use tracing::error;
 use tracing::log::debug;
 use crate::utils::config::get_env_or_default;

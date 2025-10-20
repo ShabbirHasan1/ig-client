@@ -2,9 +2,8 @@
 use crate::error::AppError;
 use async_trait::async_trait;
 use crate::model::requests::RecentPricesRequest;
-use crate::model::responses::DBEntryResponse;
+use crate::model::responses::{DBEntryResponse, MultipleMarketDetailsResponse};
 use crate::presentation::market::{HistoricalPricesResponse, MarketData, MarketDetails, MarketNavigationResponse, MarketSearchResult};
-
 
 
 /// Interface for the market service
@@ -36,7 +35,7 @@ pub trait MarketService: Send + Sync {
     async fn get_multiple_market_details(
         &self,
         epics: &[String],
-    ) -> Result<Vec<MarketDetails>, AppError>;
+    ) -> Result<MultipleMarketDetailsResponse, AppError>;
 
     /// Gets historical prices for a market
     async fn get_historical_prices(

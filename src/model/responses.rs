@@ -6,6 +6,7 @@
 use chrono::{DateTime, Utc};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
+use crate::prelude::MarketDetails;
 use crate::presentation::instrument::InstrumentType;
 use crate::presentation::market::{MarketData, MarketNode};
 
@@ -78,4 +79,11 @@ impl From<&MarketData> for DBEntryResponse {
     fn from(market: &MarketData) -> Self {
         DBEntryResponse::from(market.clone())
     }
+}
+
+
+#[derive(DebugPretty, Clone, Serialize, Deserialize, Default)]
+pub struct MultipleMarketDetailsResponse {
+    #[serde(rename = "marketDetails")]
+    market_details: Vec<MarketDetails>,
 }

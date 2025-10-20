@@ -16,7 +16,6 @@ use ig_client::utils::setup_logger;
 /// - IG_RATE_LIMIT_BURST_SIZE (default: 3)
 ///
 /// Run with: cargo run --bin simple_rate_limiter
-use serde_json::Value;
 use std::time::Instant;
 use tracing::info;
 use ig_client::application::interfaces::market::MarketService;

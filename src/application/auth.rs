@@ -22,7 +22,7 @@ use reqwest::{Client, Method};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
-use crate::model::auth::{OAuthToken, SecurityHeaders, SessionResponse};
+pub(crate) use crate::model::auth::{OAuthToken, SecurityHeaders, SessionResponse};
 
 const USER_AGENT: &str = "ig-client/0.6.0";
 
@@ -308,7 +308,7 @@ impl Auth {
 
         if let Some(sess) = current_session {
             if sess.is_expired(Some(1)) {
-                warn!("Expired, performing login");
+                debug!("Session expired, performing login");
                 self.login().await
             } else {
                 Ok(sess)

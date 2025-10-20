@@ -73,7 +73,7 @@ path = "benches/benchmarks.rs"
 members = [
 #    "examples/account",
 #    "examples/chart",
-#    "examples/market",
+    "examples/market",
 #    "examples/orders",
 #    "examples/trade",
 #    "examples/transactions",
