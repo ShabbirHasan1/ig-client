@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use ig_client::storage::historical_prices::{parse_snapshot_time, StorageStats};
+use ig_client::storage::historical_prices::{StorageStats, parse_snapshot_time};
 
 fn dt_utc(s: &str, fmt: &str) -> DateTime<Utc> {
     let ndt = NaiveDateTime::parse_from_str(s, fmt).unwrap();
@@ -29,10 +29,10 @@ fn parse_snapshot_time_accepts_multiple_formats() {
 fn parse_snapshot_time_rejects_invalid_inputs() {
     for bad in [
         "",
-        "2025/13/01 00:00:00", // invalid month
-        "2025-10-32 00:00:00", // invalid day
+        "2025/13/01 00:00:00",  // invalid month
+        "2025-10-32 00:00:00",  // invalid day
         "2025-10-20T19:22:33Z", // unsupported separator/timezone
-        "20-10-2025 00:00:00",   // wrong order
+        "20-10-2025 00:00:00",  // wrong order
         "2025-10-20",
     ] {
         assert!(parse_snapshot_time(bad).is_err(), "should fail for {bad}");

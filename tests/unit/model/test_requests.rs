@@ -118,7 +118,10 @@ fn create_option_helpers_sell_and_buy_default_levels() {
     );
     assert_eq!(buy.direction, Direction::Buy);
     assert_eq!(buy.level, Some(DEFAULT_ORDER_BUY_LEVEL));
-    assert!((buy.size - 3.14).abs() < 1e-9);
+    #[allow(clippy::approx_constant)]
+    {
+        assert!((buy.size - 3.14).abs() < 1e-9);
+    }
     assert_eq!(buy.currency_code, "GBP");
 }
 

@@ -68,10 +68,10 @@ fn session_expiry_checks_and_alias() {
     let s = make_session(120, true);
 
     // With default margin (60s), should be valid
-    assert_eq!(s.is_expired(None), false);
+    assert!(!s.is_expired(None));
 
     // With larger margin (180s), should be considered expiring
-    assert_eq!(s.is_expired(Some(180)), true);
+    assert!(s.is_expired(Some(180)));
 
     // Alias should behave the same
     assert_eq!(s.needs_token_refresh(None), s.is_expired(None));

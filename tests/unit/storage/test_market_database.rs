@@ -43,7 +43,10 @@ async fn find_symbol_for_market_picks_first_matching_key_or_unknown() {
     );
 
     // No match => UNKNOWN
-    assert_eq!(svc.find_symbol_for_market("Unmapped Instrument", &map), "UNKNOWN");
+    assert_eq!(
+        svc.find_symbol_for_market("Unmapped Instrument", &map),
+        "UNKNOWN"
+    );
 }
 
 #[tokio::test]
@@ -53,13 +56,17 @@ async fn convert_update_time_handles_valid_invalid_and_none() {
     // 1 Jan 2025 00:00:00.123 UTC in milliseconds
     let ms: i64 = 1735689600123; // 2025-01-01T00:00:00.123Z
     let dt = svc.convert_update_time(&Some(ms.to_string())).unwrap();
-    let expected: DateTime<Utc> = Utc.timestamp_opt(ms / 1000, ((ms % 1000) as u32) * 1_000_000)
+    let expected: DateTime<Utc> = Utc
+        .timestamp_opt(ms / 1000, ((ms % 1000) as u32) * 1_000_000)
         .single()
         .unwrap();
     assert_eq!(dt, expected);
 
     // Invalid number => None
-    assert!(svc.convert_update_time(&Some("not-a-number".into())).is_none());
+    assert!(
+        svc.convert_update_time(&Some("not-a-number".into()))
+            .is_none()
+    );
 
     // None => None
     assert!(svc.convert_update_time(&None).is_none());

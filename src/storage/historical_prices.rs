@@ -211,7 +211,9 @@ pub async fn store_historical_prices(
 }
 
 /// Parse snapshot time from IG format to `DateTime<Utc>`
-pub fn parse_snapshot_time(snapshot_time: &str) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
+pub fn parse_snapshot_time(
+    snapshot_time: &str,
+) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
     // IG format: "yyyy/MM/dd hh:mm:ss" or "yyyy-MM-dd hh:mm:ss"
     let formats = [
         "%Y/%m/%d %H:%M:%S",

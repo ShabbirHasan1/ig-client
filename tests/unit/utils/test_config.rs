@@ -84,7 +84,10 @@ fn test_get_env_or_none_with_float() {
     unsafe {
         env::set_var("TEST_VAR_FLOAT", "3.14");
         let result: Option<f64> = get_env_or_none("TEST_VAR_FLOAT");
-        assert_eq!(result, Some(3.14));
+        #[allow(clippy::approx_constant)]
+        {
+            assert_eq!(result, Some(3.14));
+        }
         env::remove_var("TEST_VAR_FLOAT");
     }
 }
